@@ -1,0 +1,9 @@
+/.idea/
+/configs/
+/venv/
+.env
+.idea
+*.pyc
+*.log
+*.pkl
+*.iml

@@ -15,7 +15,7 @@ def print_rule_direction(pf, rule, num):
     for cnf in rule.destination:
         if cnf['type'] == 'port':
             str_ports = f'[{cnf['value']}]'
-    str_type = PFs[0].config.filter[1].type
+    str_type = rule.type
     print(f'[{pf.name:7}][{str(num).center(4)}][{rule.tracker}][{str_type}][{str_floating.center(11)}] '
           f'"{rule.descr_full.center(40)}" '
           f'{str_source_inverse}{f'({str_source})'.center(20)} > {str_destination_inverse}({str_destination}){str_ports}')

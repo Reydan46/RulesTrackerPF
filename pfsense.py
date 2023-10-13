@@ -381,7 +381,7 @@ class RulesPFSense:
             list_direction.append(alias_name)
         return list_direction
 
-    def obj_direction(self, direction, rule):
+    def obj_direction(self, direction, rule, path):
         inverse = False
         address = []
         for i in direction:
@@ -397,7 +397,7 @@ class RulesPFSense:
                         logger.debug(f'[network] {i['value']}')
                         logger.debug(f'[network] {address[-1]}')
                 case 'any':
-                    if rule.floating == 'no' and rule.interface:
+                    if rule.floating == 'no' and rule.interface and path == 'src':
                         address.append(self.get_obj_interface(rule.interface))
                         if not address[-1]:
                             logger.debug(f'[any-interface] {rule.interface}')
@@ -417,8 +417,8 @@ class RulesPFSense:
 
     def post_gen_obj_search(self):
         for rule in self.filter:
-            rule.source_obj = self.obj_direction(rule.source, rule)
-            rule.destination_obj = self.obj_direction(rule.destination, rule)
+            rule.source_obj = self.obj_direction(rule.source, rule, path='src')
+            rule.destination_obj = self.obj_direction(rule.destination, rule, path='dst')
 
 
 class PFSense:

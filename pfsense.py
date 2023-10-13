@@ -12,10 +12,8 @@ import xml.etree.ElementTree
 class NetPoint:
     network = None
     url = None
-    inverse = False
 
-    def __init__(self, input_str, inverse=False):
-        self.inverse = inverse
+    def __init__(self, input_str):
         if not self.parse_ip(input_str):
             if not self.parse_urls(input_str):
                 logger.error(f'Error parsing NetPoint: "{input_str}"')
@@ -44,18 +42,16 @@ class NetPoint:
         try:
             ip_obj = IPAddress(ip)
             if not self.network:
-                return False if not self.inverse else True
+                return False
             if ip_obj not in self.network:
-                return False if not self.inverse else True
-            return True if not self.inverse else False
+                return False
+            return True
         except Exception:
             logger.error(f'Error create IPAddress from {ip}')
-            return False if not self.inverse else True
+            return False
 
     def __str__(self):
-        str_inverse = "! " if self.inverse else ""
-        str_content = str(self.network) if self.network else self.url
-        return f'{str_inverse}{str_content}'
+        return str(self.network) if self.network else self.url
 
 
 class ElementPFSense:
@@ -415,9 +411,9 @@ class RulesPFSense:
 
         if address:
             for i in address:
-                output.append(NetPoint(i, inverse))
+                output.append(NetPoint(i))
 
-        return output
+        return {'inverse': inverse, 'direction': output}
 
     def post_gen_obj_search(self):
         for rule in self.filter:

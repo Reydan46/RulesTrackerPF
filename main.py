@@ -26,26 +26,54 @@ if __name__ == '__main__':
     # Search BAD
     while True:
         ip = input('Enter IP:')
-        for pf in PFs:
+        # for pf in PFs:
+        pf = PFs[0]
+        if True:
             print("#" * 20)
             num = 0
             for rule in pf.config.filter:
                 flag_find = False
                 if not flag_find:
-                    for source in rule.source_obj:
+                    sub_flag_find = False
+
+                    for source in rule.source_obj['direction']:
                         if source.ip_in_range(ip):
-                            num += 1
-                            print(f'[{pf.name:7}][{num:4}][src][{rule.tracker}] '
-                                  f'"{rule.descr_full:33}" '
-                                  f'({', '.join([str(j) for j in rule.source_obj])}) > ({', '.join([str(j) for j in rule.destination_obj])})')
-                            flag_find = True
+                            sub_flag_find = True
                             break
+
+                    if rule.source_obj['inverse']:
+                        sub_flag_find = not sub_flag_find
+
+                    if sub_flag_find:
+                        num += 1
+                        str_source_inverse = "!" if rule.source_obj['inverse'] else ""
+                        str_source = ', '.join([str(j) for j in rule.source_obj['direction']])
+                        str_destination_inverse = "!" if rule.destination_obj['inverse'] else ""
+                        str_destination = ', '.join([str(j) for j in rule.destination_obj['direction']])
+                        print(f'[{pf.name:7}][{num:4}][src][{rule.tracker}] '
+                              f'"{rule.descr_full:33}" '
+                              f'{str_source_inverse}({str_source}) > {str_destination_inverse}({str_destination})')
+                        flag_find = True
                 if not flag_find:
-                    for dest in rule.destination_obj:
+                    sub_flag_find = False
+
+                    for dest in rule.destination_obj['direction']:
                         if dest.ip_in_range(ip):
-                            num += 1
-                            print(f'[{pf.name:7}][{num:4}][dst][{rule.tracker}] '
-                                  f'"{rule.descr_full:33}" '
-                                  f'({', '.join([str(j) for j in rule.source_obj])}) > ({', '.join([str(j) for j in rule.destination_obj])})')
+                            sub_flag_find = True
                             break
+
+                    if rule.destination_obj['inverse']:
+                        sub_flag_find = not sub_flag_find
+
+                    if sub_flag_find:
+                        num += 1
+                        str_source_inverse = "!" if rule.source_obj['inverse'] else ""
+                        str_source = ', '.join([str(j) for j in rule.source_obj['direction']])
+                        str_destination_inverse = "!" if rule.destination_obj['inverse'] else ""
+                        str_destination = ', '.join([str(j) for j in rule.destination_obj['direction']])
+                        print(f'[{pf.name:7}][{num:4}][dst][{rule.tracker}] '
+                              f'"{rule.descr_full:33}" '
+                              f'{str_source_inverse}({str_source}) > {str_destination_inverse}({str_destination})')
+                        flag_find = True
+
         print("#" * 20)

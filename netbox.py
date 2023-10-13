@@ -50,6 +50,7 @@ class NetboxAPI:
                         and datetime.datetime.now() - cache_data["timestamp"] <= cache_expiry
                 ):
                     cls.roles = cache_data["roles"]
+                    return
 
         logger.debug("Getting roles from NetBox")
         roles = {

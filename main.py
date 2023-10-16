@@ -86,9 +86,9 @@ if __name__ == '__main__':
             router_devices = NetboxAPI.get_devices(role=NetboxAPI.roles['Router'])
 
     PFs = []
-    # for router in router_devices:
-    if True:
-        router = router_devices[0]
+    for router in router_devices:
+    # if True:
+    #     router = router_devices[0]
         pf = PFSense(
             ip=router.primary_ip4.address.split('/')[0],
             name=router.name

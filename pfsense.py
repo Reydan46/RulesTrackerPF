@@ -44,13 +44,15 @@ class NetPoint:
         if not self.network:
             return False, None
         try:
+            # Пытаемся преобразовать IP в IPAddress
             ip_obj = IPAddress(ip)
-            if ip_obj not in self.network:
-                return False,None
-            return True,str(self.network)
+            # Проверяем, входит ли IP в сеть
+            if ip_obj in self.network:
+                # Входит
+                return True, str(self.network)
         except Exception as e:
             logger.exception(f"Error check IP ({ip}) in range. Error: {e}")
-            return False,None
+        return False, None
 
     def __str__(self):
         return str(self.network) if self.network else self.url

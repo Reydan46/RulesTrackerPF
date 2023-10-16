@@ -278,7 +278,7 @@ class RulesPFSense:
 
         str_direction = ''
         # Ищем алиас по имени
-        alias = self.aliases[alias_name]
+        alias: AliasesPFSense = self.aliases[alias_name]
         # Если алиас найден
         if alias:
             # Добавляем его название
@@ -373,7 +373,7 @@ class RulesPFSense:
     def get_obj_alias(self, alias_name):
         list_direction = []
         # Ищем алиас по имени
-        alias = self.aliases[alias_name]
+        alias:AliasesPFSense = self.aliases[alias_name]
         # Если алиас найден
         if alias:
             # Пробегаемся по его адресам

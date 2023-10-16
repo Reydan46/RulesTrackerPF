@@ -1,5 +1,4 @@
-import ipaddress
-
+from netaddr import IPAddress, IPNetwork
 from dotenv import load_dotenv
 
 from colorama import Fore
@@ -9,7 +8,7 @@ from netbox import NetboxAPI
 from pfsense import PFSense
 
 
-def print_rule_direction(inp_pf, inp_rule, inp_num, inp_table):
+def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table, tmp_direction):
     str_source = '\n'.join(
         [f"{Fore.RED if inp_rule.source_obj['inverse'] else ''}{j}{Fore.RESET}" for j in
          inp_rule.source_obj['direction']])
@@ -28,53 +27,67 @@ def print_rule_direction(inp_pf, inp_rule, inp_num, inp_table):
         inp_rule.gateway_full,
         str_source,
         str_destination,
-        str_ports
+        str_ports,
+        tmp_direction
     ])
 
 
 def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table, home):
-    flag_find = False
-    sub_flag_find = False
-
+    direction=''
+    # Пропуск отключённых правил
     if rule.disabled != 'no':
-        return flag_find
+        return False
 
+    ### Проверка источника
+    # Флаг найденного правила
+    find_rule = False
     for source in inp_rule.source_obj['direction']:
         ip_matched, network = source.ip_in_range(inp_ip)
         if ip_matched:
             if home:
-                sub_flag_find = True
+                find_rule = True
                 break
             else:
                 if network != '0.0.0.0/0':
-                    sub_flag_find = True
+                    find_rule = True
                     break
-
+    # Если нужно НЕ[алиас|сеть] в источнике
     if inp_rule.source_obj['inverse']:
-        sub_flag_find = not sub_flag_find
+        # Инвертируем результат поиска
+        find_rule = not find_rule
 
-    if sub_flag_find:
-        print_rule_direction(inp_pf, inp_rule, inp_num, inp_table)
-        flag_find = True
-        print_rule_direction(inp_pf, inp_rule, inp_num, inp_table)
+    ### Временно
+    if find_rule:
+        direction='src'
 
-    if not flag_find:
-        sub_flag_find = False
-
+    ### Проверка назначения
+    # Если в источнике не было найдено правила
+    if not find_rule:
+        # Обходим все сети в назначении
         for dest in inp_rule.destination_obj['direction']:
+            # Проверяем вхождение введённого ip в сеть
             ip_matched, network = dest.ip_in_range(inp_ip)
+            # Если ip входит в сеть
             if ip_matched:
-                sub_flag_find = True
+                # Поднимаем флаг поиска
+                find_rule = True
                 break
-
+        # Если нужно НЕ[алиас|сеть] в назначении
         if inp_rule.destination_obj['inverse']:
-            sub_flag_find = not sub_flag_find
+            # Инвертируем результат поиска
+            find_rule = not find_rule
 
-        if sub_flag_find:
-            flag_find = True
-            print_rule_direction(inp_pf, inp_rule, inp_num, inp_table)
+        ### Временно
+        if find_rule:
+            direction='dst'
 
-    return flag_find
+    ### Занесение найденного правила в таблицу
+    # Если поиск правила был успешен
+    if find_rule:
+        # Заносим его в таблицу
+        add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table, direction)
+
+    return find_rule
 
 
 if __name__ == '__main__':
@@ -91,8 +104,8 @@ if __name__ == '__main__':
 
     PFs = []
     for router in router_devices:
-    # if True:
-    #     router = router_devices[0]
+        # if True:
+        #     router = router_devices[0]
         pf = PFSense(
             ip=router.primary_ip4.address.split('/')[0],
             name=router.name
@@ -110,27 +123,27 @@ if __name__ == '__main__':
 
         table = PrettyTable(
             ["PF Name", "Num", "Tracker", "Action", "Floating", "Description", "Gateway", "Source", "Destination",
-             "Ports"])
+             "Ports","Found IN"])
         # Включаем показ разделителей между строками таблицы
         table.hrules = 1
         # Ограничение ширины столбца "Description" до 20 символов
         table.max_width["Description"] = 30
 
         for pf in PFs:
-            separator_row = ["-" * len(column) for column in table.field_names]
-            table.add_row(separator_row)
             num = 0
             filtered_rules = []
 
             home_pf = False
-            interfaces = pf.config.interfaces.elements
-            for interface in interfaces:
-                if interface.ipaddr and interface.subnet:
-                    ip_network_string = f"{interface.ipaddr}/{interface.subnet}"
-                    ip_network = ipaddress.IPv4Network(ip_network_string, strict=False)
-                    if ipaddress.IPv4Address(ip) in ip_network:
+            for interface in pf.config.interfaces:
+                ip_network_string = interface.get_ip_obj()
+                if ip_network_string:
+                    ip_network = IPNetwork(ip_network_string)
+                    if IPAddress(ip) in ip_network:
                         home_pf = True
                         break
+
+            if num > 0:
+                table.add_row(["-" * len(column) for column in table.field_names])
 
             # Обработка правил floating (quick)
             for rule in pf.config.filter:

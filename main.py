@@ -1,6 +1,5 @@
 import ipaddress
 
-import os
 from dotenv import load_dotenv
 
 from colorama import Fore
@@ -37,6 +36,9 @@ def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table, home):
     flag_find = False
     sub_flag_find = False
 
+    if rule.disabled != 'no':
+        return flag_find
+
     for source in inp_rule.source_obj['direction']:
         ip_matched, network = source.ip_in_range(inp_ip)
         if ip_matched:
@@ -54,6 +56,7 @@ def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table, home):
     if sub_flag_find:
         print_rule_direction(inp_pf, inp_rule, inp_num, inp_table)
         flag_find = True
+        print_rule_direction(inp_pf, inp_rule, inp_num, inp_table)
 
     if not flag_find:
         sub_flag_find = False
@@ -68,9 +71,10 @@ def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table, home):
             sub_flag_find = not sub_flag_find
 
         if sub_flag_find:
+            flag_find = True
             print_rule_direction(inp_pf, inp_rule, inp_num, inp_table)
 
-    return int(flag_find)
+    return flag_find
 
 
 if __name__ == '__main__':
@@ -113,12 +117,11 @@ if __name__ == '__main__':
         table.max_width["Description"] = 30
 
         for pf in PFs:
-        # pf = PFs[1]
-        # if True:
             separator_row = ["-" * len(column) for column in table.field_names]
             table.add_row(separator_row)
             num = 0
-            
+            filtered_rules = []
+
             home_pf = False
             interfaces = pf.config.interfaces.elements
             for interface in interfaces:
@@ -128,20 +131,26 @@ if __name__ == '__main__':
                     if ipaddress.IPv4Address(ip) in ip_network:
                         home_pf = True
                         break
-            
-            # ОБработка правил floating (quick)
+
+            # Обработка правил floating (quick)
             for rule in pf.config.filter:
                 if rule.floating_full == 'yes (quick)':
-                    num += check_rule(rule, ip, num, pf, table, home_pf)
-
+                    if check_rule(rule, ip, num, pf, table, home_pf):
+                        filtered_rules.append(rule)
+                        num += 1
             # Обработка правил интерфейсов
             for rule in pf.config.filter:
                 if rule.floating == 'no':
-                    num += check_rule(rule, ip, num, pf, table, home_pf)
-
+                    if check_rule(rule, ip, num, pf, table, home_pf):
+                        filtered_rules.append(rule)
+                        num += 1
             # Обработка правил floating (без quick)
             for rule in pf.config.filter:
                 if rule.floating == 'yes' and rule.quick == '':
-                    num += check_rule(rule, ip, num, pf, table, home_pf)
+                    if check_rule(rule, ip, num, pf, table, home_pf):
+                        filtered_rules.append(rule)
+                        num += 1
+
+            pf.config.get_html(custom_rules=filtered_rules, save=True, filename=f"report\\{pf.name}.html")
 
         print(table)

@@ -42,19 +42,19 @@ class NetPoint:
     def ip_in_range(self, ip):
         # Проверяем, задана ли сеть (а не url)
         if not self.network:
-            return False
+            return False, None
         try:
             # Пытаемся преобразовать IP в IPAddress
             ip_obj = IPAddress(ip)
             # Проверяем, входит ли IP в сеть
             if not self.network:
-                return False,None
+                return False, None
             if ip_obj in self.network:
                 # Входит
-                return True,str(self.network)
+                return True, str(self.network)
         except Exception as e:
             logger.exception(f"Error check IP ({ip}) in range. Error: {e}")
-        return False,None
+        return False, None
 
     def __str__(self):
         return str(self.network) if self.network else self.url
@@ -426,13 +426,103 @@ class RulesPFSense:
             rule.source_obj = self.obj_direction(rule.source, rule, path='src')
             rule.destination_obj = self.obj_direction(rule.destination, rule, path='dst')
 
+    def get_html(self, custom_rules=None, save=False, filename='', minify=True):
+        if custom_rules:
+            rules = custom_rules
+        else:
+            rules = self.filter
+
+        fields = [['tracker', 'tracker'], ['action', 'type'], ['floating', 'floating'], ['interface', 'interface'],
+                  ['protocol', 'protocol'], ['source', 'source'], ['destination', 'destination'],
+                  ['gateway', 'gateway'], ['description', 'descr'], ['created', 'created'], ['updated', 'updated']]
+        if minify:
+            html_output = '''<html><head>
+    <meta charset="utf-8">
+</head>
+<body>
+    <style>
+    table{width:100%;margin:0 auto;clear:both;border-collapse:separate;border-spacing:0;border:1px solid #ababab;font-size:12px}
+    table thead td,table thead th{padding:10px;border-bottom:1px solid rgba(0,0,0,.3)}
+    tbody tr:first-child td{border-top:none}tbody td{border-top:1px solid rgba(0,0,0,.15)}td,th{border-style:solid;text-align:center!important}
+    tr:hover{background:#ffeb0052!important}
+    .disabled{background:repeating-linear-gradient(45deg,transparent 0 5px,#00000014 0 10px);color:#a7a7a7}
+    .disabled:hover{background:repeating-linear-gradient(45deg,transparent 0 5px,#00000014 0 10px)!important;color:#000}
+    .not{color:red;font-weight:700}th{text-transform:capitalize;border-color:#00000026;border-width:0 1 1 0}
+    body{margin:0}table thead th{padding:4px}thead th{font-size:15px;background-color:#bdbdbd}
+    td{padding:0 0 0 3px!important;border-width:0 1px 0 0;border-right-color:#00000026}html{font-family:sans-serif}
+    .add{background-color:#00ff0820!important}.del{background-color:#ff000020!important}
+    .chg_old{background:repeating-linear-gradient(45deg,transparent 0 5px,#0089ff20 0 10px)!important}
+    .chg_new{background-color:#0089ff20!important}.add:hover{background-color:#00ff0850!important}
+    .del:hover{background-color:#ff000050!important}
+    .chg_old:hover{background:repeating-linear-gradient(45deg,transparent 0 5px,#0089ff50 0 10px)!important}
+    .chg_new:hover{background-color:#0089ff50!important}
+    </style>
+    <table id='main_tbl' class='display'>
+'''
+        else:
+            html_output = '''<html><head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="DataTables/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css" href="DataTables/main.css"/>
+    <script type="text/javascript" src="DataTables/jquery.min.js"></script>
+    <script type="text/javascript" src="DataTables/datatables.min.js"></script>
+</head>
+<body>
+    <table id='main_tbl' class='display'>
+'''
+
+        head = ['thead']
+        if not minify:
+            head += ['tfoot']
+        for elem in head:
+            html_output += f"\t\t<{elem}>\n\t\t<tr>\n"
+            for name, key in fields:
+                html_output += f'\t\t\t<th>{name}</th>\n'
+            html_output += f"\t\t</tr>\n\t\t</{elem}>\n"
+
+        html_output += "\t\t<tbody>\n"
+        for rule in rules:
+
+            tr_class = []
+            if rule.disabled == '':
+                tr_class += ["disabled"]
+            if rule.state != '':
+                tr_class += [rule.state]
+
+            if tr_class:
+                html_output += f'\t\t<tr class="{" ".join(tr_class)}">\n'
+            else:
+                html_output += '\t\t<tr>\n'
+
+            for name, key in fields:
+                html_output += f'\t\t\t<td>{rule.__dict__[f"{key}_full"]}</td>\n'
+
+            html_output += '\t\t</tr>\n'
+        html_output += "\t\t</tbody>\n\t</table>\n"
+        if not minify:
+            html_output += '\t<script type="text/javascript" src="DataTables/main.js"></script>\n'
+        html_output += '</body>\n</html>'
+
+        self.html = html_output
+
+        if save:
+            self.save_html(filename)
+
+    def save_html(self, filename):
+        logger.info(f'Save report')
+        try:
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            open(os.path.join(filename), 'w', encoding='UTF-8').write(self.html)
+        except Exception as e:
+            logger.exception(f'Failed to save report. Error: {e}')
+
 
 class PFSense:
     def __init__(self, name: str, ip: str, port: int = 22, backup_path: str = '') -> None:
         self.ip: str = ip
         self.port: int = port
         self.backup_path: str = backup_path or os.path.dirname(os.path.abspath(__file__))
-        self.config = None
+        self.config: RulesPFSense
         self.xml_str: str = ''
         self.xml_tree = None
         self.name: str = name

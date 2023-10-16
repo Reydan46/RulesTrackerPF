@@ -2,6 +2,7 @@ configs
 venv
 .idea
 cache_data
+report
 .env
 *.pyc
 *.log

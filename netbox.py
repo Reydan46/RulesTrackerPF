@@ -1,11 +1,9 @@
 import os
-import datetime
-import pickle
-
 import pynetbox
 import pynetbox.core.response
 
 from log import logger
+from cache import cache_get, cache_set
 
 
 class NetboxAPI:
@@ -27,51 +25,55 @@ class NetboxAPI:
             logger.exception(f"An error occurred: {e}")
             return False
 
-    # @classmethod
-    # def get_roles(cls):
-    #     logger.debug("Getting roles from NetBox")
-    #     cls.roles = {
-    #         role.name: role for role in cls.__netbox_connection.dcim.device_roles.all()
-    #     }
-
     @classmethod
     def get_roles(cls):
-        cache_file = "roles_cache.pkl"
-        cache_expiry = datetime.timedelta(hours=1)
+        logger.debug("Checking cache for roles")
+        cls.roles = {}
+        cache_file = "netbox_roles.pkl"
 
-        if os.path.exists(cache_file):
-            with open(cache_file, "rb") as file:
-                cache_data = pickle.load(file)
-                if (
-                        cache_data is not None
-                        and "roles" in cache_data
-                        and "timestamp" in cache_data
-                        and isinstance(cache_data["timestamp"], datetime.datetime)
-                        and datetime.datetime.now() - cache_data["timestamp"] <= cache_expiry
-                ):
-                    cls.roles = cache_data["roles"]
-                    return
+        cache_data = cache_get(cache_file, hours=1)
+        if cache_data is not None:
+            logger.debug("Roles loaded from cache")
+            cls.roles = cache_data
+            return True
 
         logger.debug("Getting roles from NetBox")
-        roles = {
-            role.name: role for role in cls.__netbox_connection.dcim.device_roles.all()
-        }
+        try:
+            roles = {
+                role.name: role for role in cls.__netbox_connection.dcim.device_roles.all()
+            }
+            logger.debug("Roles retrieved from NetBox API")
+        except Exception as e:
+            logger.exception(f"An error occurred: {e}")
+            cls.roles = {}
+            return False
 
-        cache_data = {"roles": roles, "timestamp": datetime.datetime.now()}
-        with open(cache_file, "wb") as file:
-            pickle.dump(cache_data, file)
-
+        cache_set(roles, cache_file)
         cls.roles = roles
+        return True
 
     @classmethod
     def get_devices(cls, role: pynetbox.core.response.Record):
-        logger.debug(f"Getting devices with role '{role}' from NetBox")
+        logger.debug("Checking cache for devices")
+        devices = []
+        cache_file = "netbox_devices.pkl"
+
+        cache_data = cache_get(cache_file, hours=1)
+        if cache_data is not None:
+            logger.debug("Devices loaded from cache")
+            return cache_data
+
+        logger.debug("Getting devices from NetBox")
         try:
-            devices = cls.__netbox_connection.virtualization.virtual_machines.filter(role_id=role.id)
+            devices_generator = cls.__netbox_connection.virtualization.virtual_machines.filter(
+                role_id=role.id
+            )
+            devices = list(devices_generator)
+            logger.debug("Devices retrieved from NetBox API")
         except Exception as e:
             logger.exception(f"An error occurred: {e}")
-            devices = None
 
+        cache_set(devices, cache_file)
         return devices
 
     @classmethod

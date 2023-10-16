@@ -40,13 +40,13 @@ class NetPoint:
         try:
             ip_obj = IPAddress(ip)
             if not self.network:
-                return False
+                return False,None
             if ip_obj not in self.network:
-                return False
-            return True
+                return False,None
+            return True,str(self.network)
         except Exception:
             logger.error(f'Error create IPAddress from {ip}')
-            return False
+            return False,None
 
     def __str__(self):
         return str(self.network) if self.network else self.url

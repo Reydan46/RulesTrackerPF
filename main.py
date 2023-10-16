@@ -1,3 +1,5 @@
+import ipaddress
+
 from dotenv import load_dotenv
 
 from netbox import NetboxAPI
@@ -35,14 +37,20 @@ def print_rule_direction(inp_pf, inp_rule, inp_num, inp_table):
     ])
 
 
-def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table):
+def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table, home):
     flag_find = False
     sub_flag_find = False
 
     for source in inp_rule.source_obj['direction']:
-        if source.ip_in_range(inp_ip):
-            sub_flag_find = True
-            break
+        ip_matched, network = source.ip_in_range(inp_ip)
+        if ip_matched:
+            if home:
+                sub_flag_find = True
+                break
+            else:
+                if network != '0.0.0.0/0':
+                    sub_flag_find = True
+                    break
 
     if inp_rule.source_obj['inverse']:
         sub_flag_find = not sub_flag_find
@@ -55,7 +63,8 @@ def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table):
         sub_flag_find = False
 
         for dest in inp_rule.destination_obj['direction']:
-            if dest.ip_in_range(inp_ip):
+            ip_matched, network = dest.ip_in_range(inp_ip)
+            if ip_matched:
                 sub_flag_find = True
                 break
 
@@ -101,23 +110,33 @@ if __name__ == '__main__':
         table.max_width["Description"] = 30
 
         for pf in PFs:
-            # pf = PFs[0]
-            # if True:
+        # pf = PFs[1]
+        # if True:
             separator_row = ["-" * len(column) for column in table.field_names]
             table.add_row(separator_row)
             num = 0
             
+            home_pf = False
+            interfaces = pf.config.interfaces.elements
+            for interface in interfaces:
+                if interface.ipaddr and interface.subnet:
+                    ip_network_string = f"{interface.ipaddr}/{interface.subnet}"
+                    ip_network = ipaddress.IPv4Network(ip_network_string, strict=False)
+                    if ipaddress.IPv4Address(ip) in ip_network:
+                        home_pf = True
+                        break
+            
             # ОБработка правил floating (quick)
             for rule in pf.config.filter:
                 if rule.floating_full == 'yes (quick)':
-                    num += check_rule(rule, ip, num, pf, table)
+                    num += check_rule(rule, ip, num, pf, table, home_pf)
 
             for rule in pf.config.filter:
                 if rule.floating == 'no':
-                    num += check_rule(rule, ip, num, pf, table)
+                    num += check_rule(rule, ip, num, pf, table, home_pf)
 
             for rule in pf.config.filter:
                 if rule.floating == 'yes' and rule.quick == '':
-                    num += check_rule(rule, ip, num, pf, table)
+                    num += check_rule(rule, ip, num, pf, table, home_pf)
 
         print(table)

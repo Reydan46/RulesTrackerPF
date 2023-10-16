@@ -3,26 +3,39 @@ from dotenv import load_dotenv
 from netbox import NetboxAPI
 from pfsense import PFSense
 
+from prettytable import PrettyTable
+from colorama import Fore
 
-def print_rule_direction(inp_pf, inp_rule, inp_num):
-    str_source_inverse = "!" if inp_rule.source_obj['inverse'] else ""
-    str_source = ', '.join([str(j) for j in inp_rule.source_obj['direction']])
-    str_destination_inverse = "!" if inp_rule.destination_obj['inverse'] else ""
-    str_destination = ', '.join([str(j) for j in inp_rule.destination_obj['direction']])
+
+def print_rule_direction(inp_pf, inp_rule, inp_num, inp_table):
+    source_inverse = True if inp_rule.source_obj['inverse'] else False
+    str_source = '\n'.join(
+        [f"{Fore.RED if source_inverse else ''}{j}{Fore.RESET}" for j in inp_rule.source_obj['direction']])
+    destination_inverse = True if inp_rule.destination_obj['inverse'] else False
+    str_destination = '\n'.join(
+        [f"{Fore.RED if destination_inverse else ''}{j}{Fore.RESET}" for j in inp_rule.destination_obj['direction']])
     str_floating = inp_rule.floating_full
     str_ports = ''
     for cnf in inp_rule.destination:
         if cnf['type'] == 'port':
-            str_ports = f'[{cnf['value']}]'
+            str_ports = cnf['value']
     str_type = inp_rule.type
-    print(f'[{inp_pf.name:7}][{str(inp_num).center(4)}][{inp_rule.tracker}][{str_type}][{str_floating.center(11)}] '
-          f'"{inp_rule.descr_full.center(40)}" '
-          f'{str_source_inverse}{f'({str_source})'.center(20)}'
-          f' > '
-          f'{str_destination_inverse}({str_destination}){str_ports}')
+
+    inp_table.add_row([
+        inp_pf.name,
+        str(inp_num + 1),
+        inp_rule.tracker,
+        str_type,
+        str_floating,
+        inp_rule.descr_full,
+        inp_rule.gateway_full,
+        str_source,
+        str_destination,
+        str_ports
+    ])
 
 
-def check_rule(inp_rule, inp_ip, inp_num, inp_pf):
+def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table):
     flag_find = False
     sub_flag_find = False
 
@@ -35,8 +48,7 @@ def check_rule(inp_rule, inp_ip, inp_num, inp_pf):
         sub_flag_find = not sub_flag_find
 
     if sub_flag_find:
-        inp_num += 1
-        print_rule_direction(inp_pf, inp_rule, inp_num)
+        print_rule_direction(inp_pf, inp_rule, inp_num, inp_table)
         flag_find = True
 
     if not flag_find:
@@ -51,21 +63,22 @@ def check_rule(inp_rule, inp_ip, inp_num, inp_pf):
             sub_flag_find = not sub_flag_find
 
         if sub_flag_find:
-            inp_num += 1
-            print_rule_direction(inp_pf, inp_rule, inp_num)
+            print_rule_direction(inp_pf, inp_rule, inp_num, inp_table)
 
-    return inp_num
+    return int(flag_find)
 
 
 if __name__ == '__main__':
+    router_devices = []
+
     # Загрузка переменных окружения из .env
-    load_dotenv()
+    load_dotenv(dotenv_path='.env')
     # Создание подключения с NetBox
-    NetboxAPI.create_connection()
-    # Получение ролей устройств с NetBox
-    NetboxAPI.get_roles()
-    # Получение устройств с ролью router (в нашем случае это все pfSense)
-    router_devices = NetboxAPI.get_devices(role=NetboxAPI.roles['Router'])
+    if NetboxAPI.create_connection():
+        # Получение ролей устройств с NetBox
+        if NetboxAPI.get_roles() and 'Router' in NetboxAPI.roles:
+            # Получение устройств с ролью router (в нашем случае это все pfSense)
+            router_devices = NetboxAPI.get_devices(role=NetboxAPI.roles['Router'])
 
     PFs = []
     for router in router_devices:
@@ -76,24 +89,33 @@ if __name__ == '__main__':
         pf.run()
         PFs.append(pf)
 
-    # Search BAD
+    # Search Console
     while True:
-        ip = input('Enter IP:')
+        ip = input('Enter IP: ')
+        table = PrettyTable(
+            ["PF Name", "Num", "Tracker", "Action", "Floating", "Description", "Gateway", "Source", "Destination",
+             "Ports"])
+        # Включаем показ разделителей между строками таблицы
+        table.hrules = 1
+        # Ограничение ширины столбца "Description" до 20 символов
+        table.max_width["Description"] = 30
+
         for pf in PFs:
             # pf = PFs[0]
             # if True:
-            print("#" * 20)
+            separator_row = ["-" * len(column) for column in table.field_names]
+            table.add_row(separator_row)
             num = 0
             for rule in pf.config.filter:
                 if rule.floating_full == 'yes (quick)':
-                    num = check_rule(rule, ip, num, pf)
+                    num += check_rule(rule, ip, num, pf, table)
 
             for rule in pf.config.filter:
                 if rule.floating == 'no':
-                    num = check_rule(rule, ip, num, pf)
+                    num += check_rule(rule, ip, num, pf, table)
 
             for rule in pf.config.filter:
                 if rule.floating == 'yes' and rule.quick == '':
-                    num = check_rule(rule, ip, num, pf)
+                    num += check_rule(rule, ip, num, pf, table)
 
-        print("#" * 20)
+        print(table)

@@ -3,3 +3,4 @@ python-dotenv~=1.0.0
 pynetbox~=7.2.0
 netaddr~=0.9.0
 colorlog~=6.7.0
+prettytable~=3.9.0

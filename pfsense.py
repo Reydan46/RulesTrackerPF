@@ -1,10 +1,11 @@
-from log import logger
-import paramiko
 import datetime
 import os
-from netaddr import IPAddress, IPNetwork
-
 import xml.etree.ElementTree
+
+from log import logger
+
+import paramiko
+from netaddr import IPAddress, IPNetwork
 
 
 class NetPoint:
@@ -16,12 +17,14 @@ class NetPoint:
             if not self.parse_urls(input_str):
                 logger.error(f'Error parsing NetPoint: "{input_str}"')
 
+    # noinspection PyBroadException
     def parse_ip(self, input_str):
         try:
             if input_str == 'any':
                 self.network = IPNetwork('0.0.0.0/0')
-            elif input_str == 'interface-(self)':
-                self.network = IPNetwork('127.0.0.1/32')
+            # Если хотим преобразовывать (self)
+            # elif input_str == 'interface-(self)':
+            #     self.network = IPNetwork('127.0.0.1/32')
             else:
                 self.network = IPNetwork(input_str)
             return True
@@ -30,23 +33,28 @@ class NetPoint:
 
     def parse_urls(self, input_str):
         if input_str:
-            # TODO: Если хотим игнорировать плохие интерфейсы
+            # Если хотим игнорировать удалённые интерфейсы
             # and not input_str.startswith('interface-'):
             self.url = input_str
             return True
         return False
 
     def ip_in_range(self, ip):
+        # Проверяем, задана ли сеть (а не url)
+        if not self.network:
+            return False
         try:
+            # Пытаемся преобразовать IP в IPAddress
             ip_obj = IPAddress(ip)
+            # Проверяем, входит ли IP в сеть
             if not self.network:
                 return False,None
-            if ip_obj not in self.network:
-                return False,None
-            return True,str(self.network)
-        except Exception:
-            logger.error(f'Error create IPAddress from {ip}')
-            return False,None
+            if ip_obj in self.network:
+                # Входит
+                return True,str(self.network)
+        except Exception as e:
+            logger.exception(f"Error check IP ({ip}) in range. Error: {e}")
+        return False,None
 
     def __str__(self):
         return str(self.network) if self.network else self.url
@@ -274,7 +282,7 @@ class RulesPFSense:
 
         str_direction = ''
         # Ищем алиас по имени
-        alias = self.aliases[alias_name]
+        alias: AliasesPFSense = self.aliases[alias_name]
         # Если алиас найден
         if alias:
             # Добавляем его название
@@ -369,7 +377,7 @@ class RulesPFSense:
     def get_obj_alias(self, alias_name):
         list_direction = []
         # Ищем алиас по имени
-        alias = self.aliases[alias_name]
+        alias: AliasesPFSense = self.aliases[alias_name]
         # Если алиас найден
         if alias:
             # Пробегаемся по его адресам

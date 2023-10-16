@@ -1,9 +1,10 @@
 import os
+
 import pynetbox
 import pynetbox.core.response
 
-from log import logger
 from cache import cache_get, cache_set
+from log import logger
 
 
 class NetboxAPI:
@@ -79,5 +80,11 @@ class NetboxAPI:
     @classmethod
     def get_interfaces(cls, virtual_machine):
         return cls.__netbox_connection.virtualization.interfaces.filter(
+            virtual_machine=virtual_machine.name
+        )
+
+    @classmethod
+    def get_ip_addresses(cls, virtual_machine):
+        return cls.__netbox_connection.ipam.ip_addresses.filter(
             virtual_machine=virtual_machine.name
         )

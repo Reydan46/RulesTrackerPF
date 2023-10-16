@@ -23,8 +23,8 @@ class NetPoint:
             if input_str == 'any':
                 self.network = IPNetwork('0.0.0.0/0')
             # Если хотим преобразовывать (self)
-            # elif input_str == 'interface-(self)':
-            #     self.network = IPNetwork('127.0.0.1/32')
+            elif input_str == 'interface-(self)':
+                self.network = IPNetwork('127.0.0.1/32')
             else:
                 self.network = IPNetwork(input_str)
             return True
@@ -44,17 +44,13 @@ class NetPoint:
         if not self.network:
             return False, None
         try:
-            # Пытаемся преобразовать IP в IPAddress
             ip_obj = IPAddress(ip)
-            # Проверяем, входит ли IP в сеть
-            if not self.network:
-                return False, None
-            if ip_obj in self.network:
-                # Входит
-                return True, str(self.network)
+            if ip_obj not in self.network:
+                return False,None
+            return True,str(self.network)
         except Exception as e:
             logger.exception(f"Error check IP ({ip}) in range. Error: {e}")
-        return False, None
+            return False,None
 
     def __str__(self):
         return str(self.network) if self.network else self.url

@@ -81,14 +81,16 @@ if __name__ == '__main__':
             # if True:
             print("#" * 20)
             num = 0
+            
+            # ОБработка правил floating (quick)
             for rule in pf.config.filter:
                 if rule.floating_full == 'yes (quick)':
                     check_rule(rule, ip, num, pf)
-
+            # Обработка правил интерфейсов
             for rule in pf.config.filter:
                 if rule.floating == 'no':
                     check_rule(rule, ip, num, pf)
-
+            # Обработка правил floating (not quick)
             for rule in pf.config.filter:
                 if rule.floating == 'yes' and rule.quick == '':
                     check_rule(rule, ip, num, pf)

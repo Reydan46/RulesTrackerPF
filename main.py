@@ -1,58 +1,61 @@
 from dotenv import load_dotenv
 
-from log import logger
 from netbox import NetboxAPI
 from pfsense import PFSense
 
 
-def print_rule_direction(pf, rule, num):
-    str_source_inverse = "!" if rule.source_obj['inverse'] else ""
-    str_source = ', '.join([str(j) for j in rule.source_obj['direction']])
-    str_destination_inverse = "!" if rule.destination_obj['inverse'] else ""
-    str_destination = ', '.join([str(j) for j in rule.destination_obj['direction']])
-    str_floating = rule.floating_full
+def print_rule_direction(inp_pf, inp_rule, inp_num):
+    str_source_inverse = "!" if inp_rule.source_obj['inverse'] else ""
+    str_source = ', '.join([str(j) for j in inp_rule.source_obj['direction']])
+    str_destination_inverse = "!" if inp_rule.destination_obj['inverse'] else ""
+    str_destination = ', '.join([str(j) for j in inp_rule.destination_obj['direction']])
+    str_floating = inp_rule.floating_full
     str_ports = ''
-    for cnf in rule.destination:
+    for cnf in inp_rule.destination:
         if cnf['type'] == 'port':
             str_ports = f'[{cnf['value']}]'
-    str_type = rule.type
-    print(f'[{pf.name:7}][{str(num).center(4)}][{rule.tracker}][{str_type}][{str_floating.center(11)}] '
-          f'"{rule.descr_full.center(40)}" '
-          f'{str_source_inverse}{f'({str_source})'.center(20)} > {str_destination_inverse}({str_destination}){str_ports}')
+    str_type = inp_rule.type
+    print(f'[{inp_pf.name:7}][{str(inp_num).center(4)}][{inp_rule.tracker}][{str_type}][{str_floating.center(11)}] '
+          f'"{inp_rule.descr_full.center(40)}" '
+          f'{str_source_inverse}{f'({str_source})'.center(20)}'
+          f' > '
+          f'{str_destination_inverse}({str_destination}){str_ports}')
 
-def check_rule(rule, ip, num, pf):
+
+def check_rule(inp_rule, inp_ip, inp_num, inp_pf):
     flag_find = False
+    sub_flag_find = False
+
+    for source in inp_rule.source_obj['direction']:
+        if source.ip_in_range(inp_ip):
+            sub_flag_find = True
+            break
+
+    if inp_rule.source_obj['inverse']:
+        sub_flag_find = not sub_flag_find
+
+    if sub_flag_find:
+        inp_num += 1
+        print_rule_direction(inp_pf, inp_rule, inp_num)
+        flag_find = True
+
     if not flag_find:
         sub_flag_find = False
 
-        for source in rule.source_obj['direction']:
-            if source.ip_in_range(ip):
+        for dest in inp_rule.destination_obj['direction']:
+            if dest.ip_in_range(inp_ip):
                 sub_flag_find = True
                 break
 
-        if rule.source_obj['inverse']:
+        if inp_rule.destination_obj['inverse']:
             sub_flag_find = not sub_flag_find
 
         if sub_flag_find:
-            num += 1
-            print_rule_direction(pf, rule, num)
-            flag_find = True
+            inp_num += 1
+            print_rule_direction(inp_pf, inp_rule, inp_num)
 
-    if not flag_find:
-        sub_flag_find = False
+    return inp_num
 
-        for dest in rule.destination_obj['direction']:
-            if dest.ip_in_range(ip):
-                sub_flag_find = True
-                break
-
-        if rule.destination_obj['inverse']:
-            sub_flag_find = not sub_flag_find
-
-        if sub_flag_find:
-            num += 1
-            print_rule_direction(pf, rule, num)
-            flag_find = True
 
 if __name__ == '__main__':
     # Загрузка переменных окружения из .env
@@ -83,14 +86,14 @@ if __name__ == '__main__':
             num = 0
             for rule in pf.config.filter:
                 if rule.floating_full == 'yes (quick)':
-                    check_rule(rule, ip, num, pf)
+                    num = check_rule(rule, ip, num, pf)
 
             for rule in pf.config.filter:
                 if rule.floating == 'no':
-                    check_rule(rule, ip, num, pf)
+                    num = check_rule(rule, ip, num, pf)
 
             for rule in pf.config.filter:
                 if rule.floating == 'yes' and rule.quick == '':
-                    check_rule(rule, ip, num, pf)
+                    num = check_rule(rule, ip, num, pf)
 
         print("#" * 20)

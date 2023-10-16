@@ -1,8 +1,7 @@
-/.idea/
-/configs/
-/venv/
-.env
+configs
+venv
 .idea
+.env
 *.pyc
 *.log
 *.pkl

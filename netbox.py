@@ -27,13 +27,6 @@ class NetboxAPI:
             logger.exception(f"An error occurred: {e}")
             return False
 
-    # @classmethod
-    # def get_roles(cls):
-    #     logger.debug("Getting roles from NetBox")
-    #     cls.roles = {
-    #         role.name: role for role in cls.__netbox_connection.dcim.device_roles.all()
-    #     }
-
     @classmethod
     def get_roles(cls):
         cache_file = "roles_cache.pkl"

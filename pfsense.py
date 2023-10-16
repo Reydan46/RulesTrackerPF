@@ -1,11 +1,9 @@
-import os
 from log import logger
 import paramiko
 import datetime
 import os
 from netaddr import IPAddress, IPNetwork
 
-import re
 import xml.etree.ElementTree
 
 
@@ -94,7 +92,7 @@ class ElementPFSense:
     @staticmethod
     def if_none(text, def_val='') -> str:
         """
-        Если значение отсутсвует > возвращаем указанное стандартное значение
+        Если значение отсутствует > возвращаем указанное стандартное значение
         В противном случае > возвращаем строковое значение
         """
         return str(text) if text else def_val
@@ -244,8 +242,8 @@ class RulesPFSense:
         self.search_name = ''
         self.html = ''
 
-        self.xmltree = xml.etree.ElementTree.fromstring(xml_str)
-        for element in self.xmltree.findall('./'):
+        self.xml_tree = xml.etree.ElementTree.fromstring(xml_str)
+        for element in self.xml_tree.findall('./'):
             match element.tag:
                 case 'interfaces':
                     self.interfaces = InterfacesPFSense(element)

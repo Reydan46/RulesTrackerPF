@@ -1,10 +1,11 @@
-from log import logger
-import paramiko
 import datetime
 import os
-from netaddr import IPAddress, IPNetwork
-
 import xml.etree.ElementTree
+
+from log import logger
+
+import paramiko
+from netaddr import IPAddress, IPNetwork
 
 
 class NetPoint:
@@ -16,6 +17,7 @@ class NetPoint:
             if not self.parse_urls(input_str):
                 logger.error(f'Error parsing NetPoint: "{input_str}"')
 
+    # noinspection PyBroadException
     def parse_ip(self, input_str):
         try:
             if input_str == 'any':
@@ -26,7 +28,7 @@ class NetPoint:
             else:
                 self.network = IPNetwork(input_str)
             return True
-        except Exception as e:
+        except Exception:
             return False
 
     def parse_urls(self, input_str):
@@ -373,7 +375,7 @@ class RulesPFSense:
     def get_obj_alias(self, alias_name):
         list_direction = []
         # Ищем алиас по имени
-        alias:AliasesPFSense = self.aliases[alias_name]
+        alias: AliasesPFSense = self.aliases[alias_name]
         # Если алиас найден
         if alias:
             # Пробегаемся по его адресам

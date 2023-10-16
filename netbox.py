@@ -1,9 +1,10 @@
 import os
+
 import pynetbox
 import pynetbox.core.response
 
-from log import logger
 from cache import cache_get, cache_set
+from log import logger
 
 
 class NetboxAPI:

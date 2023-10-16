@@ -1,17 +1,20 @@
+import os
 from dotenv import load_dotenv
+
+from colorama import Fore
+from prettytable import PrettyTable
 
 from netbox import NetboxAPI
 from pfsense import PFSense
 
-from prettytable import PrettyTable
-from colorama import Fore
-
 
 def print_rule_direction(inp_pf, inp_rule, inp_num, inp_table):
     str_source = '\n'.join(
-        [f"{Fore.RED if inp_rule.source_obj['inverse'] else ''}{j}{Fore.RESET}" for j in inp_rule.source_obj['direction']])
+        [f"{Fore.RED if inp_rule.source_obj['inverse'] else ''}{j}{Fore.RESET}" for j in
+         inp_rule.source_obj['direction']])
     str_destination = '\n'.join(
-        [f"{Fore.RED if inp_rule.destination_obj['inverse'] else ''}{j}{Fore.RESET}" for j in inp_rule.destination_obj['direction']])
+        [f"{Fore.RED if inp_rule.destination_obj['inverse'] else ''}{j}{Fore.RESET}" for j in
+         inp_rule.destination_obj['direction']])
     str_ports = ''.join([cnf['value'] for cnf in inp_rule.destination if cnf['type'] == 'port'])
 
     inp_table.add_row([
@@ -74,7 +77,9 @@ if __name__ == '__main__':
             router_devices = NetboxAPI.get_devices(role=NetboxAPI.roles['Router'])
 
     PFs = []
-    for router in router_devices:
+    # for router in router_devices:
+    if True:
+        router = router_devices[0]
         pf = PFSense(
             ip=router.primary_ip4.address.split('/')[0],
             name=router.name
@@ -84,7 +89,12 @@ if __name__ == '__main__':
 
     # Search Console
     while True:
-        ip = input('Enter IP: ')
+        try:
+            ip = input('Enter IP: ')
+        except Exception:
+            print('Program terminated by user')
+            break
+
         table = PrettyTable(
             ["PF Name", "Num", "Tracker", "Action", "Floating", "Description", "Gateway", "Source", "Destination",
              "Ports"])
@@ -99,16 +109,18 @@ if __name__ == '__main__':
             separator_row = ["-" * len(column) for column in table.field_names]
             table.add_row(separator_row)
             num = 0
-            
-            # ОБработка правил floating (quick)
+
+            # Обработка правил floating (quick)
             for rule in pf.config.filter:
                 if rule.floating_full == 'yes (quick)':
                     num += check_rule(rule, ip, num, pf, table)
 
+            # Обработка правил интерфейсов
             for rule in pf.config.filter:
                 if rule.floating == 'no':
                     num += check_rule(rule, ip, num, pf, table)
 
+            # Обработка правил floating (без quick)
             for rule in pf.config.filter:
                 if rule.floating == 'yes' and rule.quick == '':
                     num += check_rule(rule, ip, num, pf, table)

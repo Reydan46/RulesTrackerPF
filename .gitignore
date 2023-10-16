@@ -1,6 +1,7 @@
 configs
 venv
 .idea
+cache_data
 .env
 *.pyc
 *.log

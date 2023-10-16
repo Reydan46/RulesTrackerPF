@@ -8,25 +8,18 @@ from colorama import Fore
 
 
 def print_rule_direction(inp_pf, inp_rule, inp_num, inp_table):
-    source_inverse = True if inp_rule.source_obj['inverse'] else False
     str_source = '\n'.join(
-        [f"{Fore.RED if source_inverse else ''}{j}{Fore.RESET}" for j in inp_rule.source_obj['direction']])
-    destination_inverse = True if inp_rule.destination_obj['inverse'] else False
+        [f"{Fore.RED if inp_rule.source_obj['inverse'] else ''}{j}{Fore.RESET}" for j in inp_rule.source_obj['direction']])
     str_destination = '\n'.join(
-        [f"{Fore.RED if destination_inverse else ''}{j}{Fore.RESET}" for j in inp_rule.destination_obj['direction']])
-    str_floating = inp_rule.floating_full
-    str_ports = ''
-    for cnf in inp_rule.destination:
-        if cnf['type'] == 'port':
-            str_ports = cnf['value']
-    str_type = inp_rule.type
+        [f"{Fore.RED if inp_rule.destination_obj['inverse'] else ''}{j}{Fore.RESET}" for j in inp_rule.destination_obj['direction']])
+    str_ports = ''.join([cnf['value'] for cnf in inp_rule.destination if cnf['type'] == 'port'])
 
     inp_table.add_row([
         inp_pf.name,
-        str(inp_num + 1),
+        f"{inp_num + 1}",
         inp_rule.tracker,
-        str_type,
-        str_floating,
+        inp_rule.type,
+        inp_rule.floating_full,
         inp_rule.descr_full,
         inp_rule.gateway_full,
         str_source,

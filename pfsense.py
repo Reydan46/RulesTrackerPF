@@ -20,33 +20,37 @@ class NetPoint:
         try:
             if input_str == 'any':
                 self.network = IPNetwork('0.0.0.0/0')
-            elif input_str == 'interface-(self)':
-                self.network = IPNetwork('127.0.0.1/32')
+            # Если хотим преобразовывать (self)
+            # elif input_str == 'interface-(self)':
+            #     self.network = IPNetwork('127.0.0.1/32')
             else:
                 self.network = IPNetwork(input_str)
             return True
-        except Exception:
+        except Exception as e:
             return False
 
     def parse_urls(self, input_str):
         if input_str:
-            # TODO: Если хотим игнорировать плохие интерфейсы
+            # Если хотим игнорировать удалённые интерфейсы
             # and not input_str.startswith('interface-'):
             self.url = input_str
             return True
         return False
 
     def ip_in_range(self, ip):
-        try:
-            ip_obj = IPAddress(ip)
-            if not self.network:
-                return False
-            if ip_obj not in self.network:
-                return False
-            return True
-        except Exception:
-            logger.error(f'Error create IPAddress from {ip}')
+        # Проверяем, задана ли сеть (а не url)
+        if not self.network:
             return False
+        try:
+            # Пытаемся преобразовать IP в IPAddress
+            ip_obj = IPAddress(ip)
+            # Проверяем, входит ли IP в сеть
+            if ip_obj not in self.network:
+                # Входит
+                return True
+        except Exception as e:
+            logger.exception(f"Error check IP ({ip}) in range. Error: {e}")
+        return False
 
     def __str__(self):
         return str(self.network) if self.network else self.url

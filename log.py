@@ -1,6 +1,8 @@
 import logging
 import sys
+
 import colorlog
+
 
 __loger__name__ = 'RulesTrackerPF'
 

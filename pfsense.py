@@ -2,10 +2,10 @@ import datetime
 import os
 import xml.etree.ElementTree
 
-from log import logger
-
 import paramiko
 from netaddr import IPAddress, IPNetwork
+
+from log import logger
 
 
 class NetPoint:
@@ -243,9 +243,9 @@ class FilterPFSense(ElementsPFSense):
 
 class RulesPFSense:
     def __init__(self, xml_str: str = ''):
-        self.interfaces = []
-        self.aliases = []
-        self.filter = []
+        self.interfaces: InterfacesPFSense
+        self.aliases: AliasesPFSense
+        self.filter: FilterPFSense
         self.search_name = ''
         self.html = ''
 

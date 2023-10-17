@@ -1,11 +1,11 @@
-from netaddr import IPAddress, IPNetwork
-from dotenv import load_dotenv
-
 from colorama import Fore
+from dotenv import load_dotenv
+from netaddr import IPAddress, IPNetwork
 from prettytable import PrettyTable
 
 from netbox import NetboxAPI
 from pfsense import PFSense
+
 
 
 def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table, tmp_direction):

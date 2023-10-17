@@ -15,7 +15,8 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table, tmp_direction):
     str_destination = '\n'.join(
         [f"{Fore.RED if inp_rule.destination_obj['inverse'] else ''}{j}{Fore.RESET}" for j in
          inp_rule.destination_obj['direction']])
-    str_ports = ''.join([cnf['value'] for cnf in inp_rule.destination if cnf['type'] == 'port'])
+    str_ports = ''.join([cnf['value']
+                        for cnf in inp_rule.destination if cnf['type'] == 'port'])
 
     inp_table.add_row([
         inp_pf.name,
@@ -33,58 +34,43 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table, tmp_direction):
 
 
 def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table, home):
-    direction=''
+    def search_in_source(inp_rule, inp_ip, home):
+        for source in inp_rule.source_obj['direction']:
+            ip_matched, network = source.ip_in_range(inp_ip)
+            if ip_matched and (home or network != '0.0.0.0/0'):
+                return True
+        return False
+
+    def search_in_dest(inp_rule, inp_ip, home):
+        for dest in inp_rule.destination_obj['direction']:
+            ip_matched, network = dest.ip_in_range(inp_ip)
+            if ip_matched:
+                return True
+        return False
+
     # Пропуск отключённых правил
     if rule.disabled != 'no':
         return False
 
-    ### Проверка источника
-    # Флаг найденного правила
-    find_rule = False
-    for source in inp_rule.source_obj['direction']:
-        ip_matched, network = source.ip_in_range(inp_ip)
-        if ip_matched:
-            if home:
-                find_rule = True
-                break
-            else:
-                if network != '0.0.0.0/0':
-                    find_rule = True
-                    break
-    # Если нужно НЕ[алиас|сеть] в источнике
+    ### Ищем совпадение в source правила
+    find_rule = search_in_source(inp_rule, inp_ip, home)
+    # Если найденный source имеет характеристику NOT ("!") - инвертируем результат поиска
     if inp_rule.source_obj['inverse']:
-        # Инвертируем результат поиска
         find_rule = not find_rule
+    # Временно для дебага
+    direction = 'src' if find_rule else ''
 
-    ### Временно
-    if find_rule:
-        direction='src'
-
-    ### Проверка назначения
-    # Если в источнике не было найдено правила
+    ### Если не найдено в source - ищем в destination
     if not find_rule:
-        # Обходим все сети в назначении
-        for dest in inp_rule.destination_obj['direction']:
-            # Проверяем вхождение введённого ip в сеть
-            ip_matched, network = dest.ip_in_range(inp_ip)
-            # Если ip входит в сеть
-            if ip_matched:
-                # Поднимаем флаг поиска
-                find_rule = True
-                break
-        # Если нужно НЕ[алиас|сеть] в назначении
+        find_rule = search_in_dest(inp_rule, inp_ip, home)
+        # Если найденный destination имеет характеристику NOT ("!") - инвертируем результат поиска
         if inp_rule.destination_obj['inverse']:
-            # Инвертируем результат поиска
             find_rule = not find_rule
+        # Временно
+        direction = 'dst' if find_rule else ''
 
-        ### Временно
-        if find_rule:
-            direction='dst'
-
-    ### Занесение найденного правила в таблицу
-    # Если поиск правила был успешен
+    # Если поиск правила был успешен - заносим его в таблицу
     if find_rule:
-        # Заносим его в таблицу
         add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table, direction)
 
     return find_rule
@@ -100,7 +86,8 @@ if __name__ == '__main__':
         # Получение ролей устройств с NetBox
         if NetboxAPI.get_roles() and 'Router' in NetboxAPI.roles:
             # Получение устройств с ролью router (в нашем случае это все pfSense)
-            router_devices = NetboxAPI.get_devices(role=NetboxAPI.roles['Router'])
+            router_devices = NetboxAPI.get_devices(
+                role=NetboxAPI.roles['Router'])
 
     PFs = []
     for router in router_devices:
@@ -123,7 +110,7 @@ if __name__ == '__main__':
 
         table = PrettyTable(
             ["PF Name", "Num", "Tracker", "Action", "Floating", "Description", "Gateway", "Source", "Destination",
-             "Ports","Found IN"])
+             "Ports", "Found IN"])
         # Включаем показ разделителей между строками таблицы
         table.hrules = 1
         # Ограничение ширины столбца "Description" до 20 символов
@@ -133,37 +120,33 @@ if __name__ == '__main__':
             num = 0
             filtered_rules = []
 
+            # Определяем домашний ли pf по отношению к искомому ip
             home_pf = False
             for interface in pf.config.interfaces:
                 ip_network_string = interface.get_ip_obj()
-                if ip_network_string:
-                    ip_network = IPNetwork(ip_network_string)
-                    if IPAddress(ip) in ip_network:
-                        home_pf = True
-                        break
+                if ip_network_string and IPAddress(ip) in IPNetwork(ip_network_string):
+                    home_pf = True
+                    break
 
-            if num > 0:
-                table.add_row(["-" * len(column) for column in table.field_names])
+            table.add_row(["-" * len(column) for column in table.field_names])
 
             # Обработка правил floating (quick)
             for rule in pf.config.filter:
-                if rule.floating_full == 'yes (quick)':
-                    if check_rule(rule, ip, num, pf, table, home_pf):
-                        filtered_rules.append(rule)
-                        num += 1
+                if rule.floating_full == 'yes (quick)' and check_rule(rule, ip, num, pf, table, home_pf):
+                    filtered_rules.append(rule)
+                    num += 1
             # Обработка правил интерфейсов
             for rule in pf.config.filter:
-                if rule.floating == 'no':
-                    if check_rule(rule, ip, num, pf, table, home_pf):
-                        filtered_rules.append(rule)
-                        num += 1
+                if rule.floating == 'no' and check_rule(rule, ip, num, pf, table, home_pf):
+                    filtered_rules.append(rule)
+                    num += 1
             # Обработка правил floating (без quick)
             for rule in pf.config.filter:
-                if rule.floating == 'yes' and rule.quick == '':
-                    if check_rule(rule, ip, num, pf, table, home_pf):
-                        filtered_rules.append(rule)
-                        num += 1
+                if rule.floating == 'yes' and rule.quick == '' and check_rule(rule, ip, num, pf, table, home_pf):
+                    filtered_rules.append(rule)
+                    num += 1
 
-            pf.config.get_html(custom_rules=filtered_rules, save=True, filename=f"report\\{pf.name}.html")
+            pf.config.get_html(custom_rules=filtered_rules,
+                               save=True, filename=f"report\\{pf.name}.html")
 
         print(table)

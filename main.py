@@ -31,37 +31,32 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
     ])
 
 
+
 def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table, home):
-    def search_in_source(inp_rule, inp_ip, home):
-        for source in inp_rule.source_obj['direction']:
-            ip_matched = source.ip_in_range(inp_ip)
-            if ip_matched and (home or str(source) != '0.0.0.0/0'):
-                return True
-        return False
-
-    def search_in_dest(inp_rule, inp_ip):
-        for dest in inp_rule.destination_obj['direction']:
-            ip_matched = dest.ip_in_range(inp_ip)
-            if ip_matched:
-                return True
-        return False
-
     # Пропуск отключённых правил
     if rule.disabled != 'no':
         return False
 
     ### Ищем совпадение в source правила
-    find_rule = search_in_source(inp_rule, inp_ip, home)
+    find_rule = False
+    for source in inp_rule.source_obj['direction']:
+        ip_matched = source.ip_in_range(inp_ip)
+        if ip_matched and (home or str(source) != '0.0.0.0/0'):
+            find_rule = True
     # Если найденный source имеет характеристику NOT ("!") - инвертируем результат поиска
     if inp_rule.source_obj['inverse']:
         find_rule = not find_rule
 
-    # ### Если не найдено в source - ищем в destination
-    # if not find_rule:
-    #     find_rule = search_in_dest(inp_rule, inp_ip)
-    #     # Если найденный destination имеет характеристику NOT ("!") - инвертируем результат поиска
-    #     if inp_rule.destination_obj['inverse']:
-    #         find_rule = not find_rule
+    ### Если не найдено в source - ищем в destination
+    if not find_rule:
+        find_rule = False
+        for dest in inp_rule.destination_obj['direction']:
+            ip_matched = dest.ip_in_range(inp_ip)
+            if ip_matched:
+                find_rule = True
+        # Если найденный destination имеет характеристику NOT ("!") - инвертируем результат поиска
+        if inp_rule.destination_obj['inverse']:
+            find_rule = not find_rule
 
     # Если поиск правила был успешен - заносим его в таблицу
     if find_rule:

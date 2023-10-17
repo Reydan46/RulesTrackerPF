@@ -435,7 +435,7 @@ class RulesPFSense:
             rule.destination_obj = self.obj_direction(rule.destination, rule, path='dst')
 
     def get_html(self, custom_rules=None, save=False, filename='', minify=True):
-        if custom_rules:
+        if custom_rules is not None:
             rules = custom_rules
         else:
             rules = self.filter

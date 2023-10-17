@@ -105,7 +105,7 @@ if __name__ == '__main__':
     while True:
         try:
             ip = input('Enter IP: ')
-        except Exception:
+        except:
             print('\nProgram terminated by user')
             break
 

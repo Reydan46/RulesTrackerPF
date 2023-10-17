@@ -2,10 +2,10 @@ import datetime
 import os
 import xml.etree.ElementTree
 
-from log import logger
-
 import paramiko
 from netaddr import IPAddress, IPNetwork
+
+from log import logger
 
 
 class NetPoint:
@@ -42,18 +42,18 @@ class NetPoint:
     def ip_in_range(self, ip):
         # Проверяем, задана ли сеть (а не url)
         if not self.network:
-            return False, None
-        
+            return False
+
         try:
             # Пытаемся преобразовать IP в IPAddress
             ip_obj = IPAddress(ip)
             # Проверяем, входит ли IP в сеть
             if ip_obj in self.network:
-                return True, str(self.network)
+                return True
         except Exception as e:
             logger.exception(f"Error check IP ({ip}) in range. Error: {e}")
-        
-        return False, None
+
+        return False
 
     def __str__(self):
         return str(self.network) if self.network else self.url
@@ -243,9 +243,9 @@ class FilterPFSense(ElementsPFSense):
 
 class RulesPFSense:
     def __init__(self, xml_str: str = ''):
-        self.interfaces = []
-        self.aliases = []
-        self.filter = []
+        self.interfaces: InterfacesPFSense
+        self.aliases: AliasesPFSense
+        self.filter: FilterPFSense
         self.search_name = ''
         self.html = ''
 
@@ -391,19 +391,28 @@ class RulesPFSense:
         address = []
         for i in direction:
             match i['type']:
+                # [{'type': 'address', 'value': '10.10.10.7'}]
+                # [{'type': 'address', 'value': '10.10.11.0/26'}]
+                # [{'type': 'address', 'value': 'vcenter_ip'}]
                 case 'address':
                     address += self.get_obj_alias(i['value'])
                     if not address[-1]:
                         logger.debug(f'[address] {i['value']}')
                         logger.debug(f'[address] {address[-1]}')
+                # [{'type': 'network', 'value': 'opt1'}]
                 case 'network':
                     address.append(self.get_obj_interface(i['value']))
                     if not address[-1]:
                         logger.debug(f'[network] {i['value']}')
                         logger.debug(f'[network] {address[-1]}')
+                # [{'type': 'any', 'value': ''}]
                 case 'any':
-                    if rule.floating == 'no' and rule.interface and path == 'src':
-                        address.append(self.get_obj_interface(rule.interface))
+                    if rule.interface and path == 'src':
+                        for source in rule.interface.split(','):
+                            if source == 'all':
+                                address.append('0.0.0.0/0')
+                            else:
+                                address.append(self.get_obj_interface(source))
                         if not address[-1]:
                             logger.debug(f'[any-interface] {rule.interface}')
                             logger.debug(f'[any-interface] {address[-1]}')

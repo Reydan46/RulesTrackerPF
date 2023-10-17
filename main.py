@@ -16,7 +16,7 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table, tmp_direction):
         [f"{Fore.RED if inp_rule.destination_obj['inverse'] else ''}{j}{Fore.RESET}" for j in
          inp_rule.destination_obj['direction']])
     str_ports = ''.join([cnf['value']
-                        for cnf in inp_rule.destination if cnf['type'] == 'port'])
+                         for cnf in inp_rule.destination if cnf['type'] == 'port'])
 
     inp_table.add_row([
         inp_pf.name,
@@ -36,14 +36,15 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table, tmp_direction):
 def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table, home):
     def search_in_source(inp_rule, inp_ip, home):
         for source in inp_rule.source_obj['direction']:
-            ip_matched, network = source.ip_in_range(inp_ip)
-            if ip_matched and (home or network != '0.0.0.0/0'):
+            ip_matched = source.ip_in_range(inp_ip)
+            print(f"{str(source)=}")
+            if ip_matched and (home or str(source) != '0.0.0.0/0'):
                 return True
         return False
 
-    def search_in_dest(inp_rule, inp_ip, home):
+    def search_in_dest(inp_rule, inp_ip):
         for dest in inp_rule.destination_obj['direction']:
-            ip_matched, network = dest.ip_in_range(inp_ip)
+            ip_matched = dest.ip_in_range(inp_ip)
             if ip_matched:
                 return True
         return False
@@ -60,14 +61,14 @@ def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table, home):
     # Временно для дебага
     direction = 'src' if find_rule else ''
 
-    ### Если не найдено в source - ищем в destination
-    if not find_rule:
-        find_rule = search_in_dest(inp_rule, inp_ip, home)
-        # Если найденный destination имеет характеристику NOT ("!") - инвертируем результат поиска
-        if inp_rule.destination_obj['inverse']:
-            find_rule = not find_rule
-        # Временно
-        direction = 'dst' if find_rule else ''
+    # ### Если не найдено в source - ищем в destination
+    # if not find_rule:
+    #     find_rule = search_in_dest(inp_rule, inp_ip)
+    #     # Если найденный destination имеет характеристику NOT ("!") - инвертируем результат поиска
+    #     if inp_rule.destination_obj['inverse']:
+    #         find_rule = not find_rule
+    #     # Временно
+    #     direction = 'dst' if find_rule else ''
 
     # Если поиск правила был успешен - заносим его в таблицу
     if find_rule:
@@ -90,9 +91,9 @@ if __name__ == '__main__':
                 role=NetboxAPI.roles['Router'])
 
     PFs = []
+    # if True:
+    #     router = router_devices[1]
     for router in router_devices:
-        # if True:
-        #     router = router_devices[0]
         pf = PFSense(
             ip=router.primary_ip4.address.split('/')[0],
             name=router.name
@@ -105,7 +106,7 @@ if __name__ == '__main__':
         try:
             ip = input('Enter IP: ')
         except Exception:
-            print('Program terminated by user')
+            print('\nProgram terminated by user')
             break
 
         table = PrettyTable(

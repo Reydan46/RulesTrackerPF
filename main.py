@@ -15,8 +15,7 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
     str_destination = '\n'.join(
         [f"{Fore.RED if inp_rule.destination_obj['inverse'] else ''}{j}{Fore.RESET}" for j in
          inp_rule.destination_obj['direction']])
-    str_ports = ''.join([cnf['value']
-                         for cnf in inp_rule.destination if cnf['type'] == 'port'])
+    str_ports = '\n'.join(inp_rule.destination_ports)
 
     inp_table.add_row([
         inp_pf.name,

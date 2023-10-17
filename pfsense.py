@@ -353,6 +353,24 @@ class RulesPFSense:
     def full_floating(floating, quick):
         return f'{floating} (quick)' if quick else floating
 
+    def get_ports(self, destination):
+        ports = []
+
+        for cnf in destination:
+            if cnf['type'] == 'port':
+                alias = self.aliases[cnf['value']]
+                if alias:
+                    for str_subalias in alias.address.split(' '):
+                        subalias = self.aliases[str_subalias]
+                        if subalias:
+                            ports.extend(subalias.address.split(' '))
+                        else:
+                            ports.append(str_subalias)
+                else:
+                    ports.append(cnf['value'])
+
+        return ports
+
     def post_gen_full(self):
         for rule in self.filter:
             rule.tracker_full = rule.tracker
@@ -433,6 +451,7 @@ class RulesPFSense:
         for rule in self.filter:
             rule.source_obj = self.obj_direction(rule.source, rule, path='src')
             rule.destination_obj = self.obj_direction(rule.destination, rule, path='dst')
+            rule.destination_ports = self.get_ports(rule.destination)
 
     def get_html(self, custom_rules=None, save=False, filename='', minify=True):
         if custom_rules is not None:

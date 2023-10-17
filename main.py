@@ -117,6 +117,8 @@ if __name__ == '__main__':
         table.max_width["Description"] = 30
 
         for pf in PFs:
+        # if True:
+        #     pf = PFs[-1]
             num = 0
             filtered_rules = []
 

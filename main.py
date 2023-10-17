@@ -8,7 +8,7 @@ from pfsense import PFSense
 
 
 
-def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table, tmp_direction):
+def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
     str_source = '\n'.join(
         [f"{Fore.RED if inp_rule.source_obj['inverse'] else ''}{j}{Fore.RESET}" for j in
          inp_rule.source_obj['direction']])
@@ -28,8 +28,7 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table, tmp_direction):
         inp_rule.gateway_full,
         str_source,
         str_destination,
-        str_ports,
-        tmp_direction
+        str_ports
     ])
 
 
@@ -37,7 +36,6 @@ def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table, home):
     def search_in_source(inp_rule, inp_ip, home):
         for source in inp_rule.source_obj['direction']:
             ip_matched = source.ip_in_range(inp_ip)
-            print(f"{str(source)=}")
             if ip_matched and (home or str(source) != '0.0.0.0/0'):
                 return True
         return False
@@ -58,8 +56,6 @@ def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table, home):
     # Если найденный source имеет характеристику NOT ("!") - инвертируем результат поиска
     if inp_rule.source_obj['inverse']:
         find_rule = not find_rule
-    # Временно для дебага
-    direction = 'src' if find_rule else ''
 
     # ### Если не найдено в source - ищем в destination
     # if not find_rule:
@@ -67,12 +63,10 @@ def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table, home):
     #     # Если найденный destination имеет характеристику NOT ("!") - инвертируем результат поиска
     #     if inp_rule.destination_obj['inverse']:
     #         find_rule = not find_rule
-    #     # Временно
-    #     direction = 'dst' if find_rule else ''
 
     # Если поиск правила был успешен - заносим его в таблицу
     if find_rule:
-        add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table, direction)
+        add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table)
 
     return find_rule
 
@@ -111,7 +105,7 @@ if __name__ == '__main__':
 
         table = PrettyTable(
             ["PF Name", "Num", "Tracker", "Action", "Floating", "Description", "Gateway", "Source", "Destination",
-             "Ports", "Found IN"])
+             "Ports"])
         # Включаем показ разделителей между строками таблицы
         table.hrules = 1
         # Ограничение ширины столбца "Description" до 20 символов

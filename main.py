@@ -7,7 +7,6 @@ from netbox import NetboxAPI
 from pfsense import PFSense
 
 
-
 def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
     str_source = '\n'.join(
         [f"{Fore.RED if inp_rule.source_obj['inverse'] else ''}{j}{Fore.RESET}" for j in
@@ -16,12 +15,18 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
         [f"{Fore.RED if inp_rule.destination_obj['inverse'] else ''}{j}{Fore.RESET}" for j in
          inp_rule.destination_obj['direction']])
     str_ports = '\n'.join(inp_rule.destination_ports)
-
+    match inp_rule.type:
+        case 'block':
+            str_type = f"{Fore.RED}BLOCK{Fore.RESET}"
+        case 'reject':
+            str_type = f"{Fore.RED}REJECT{Fore.RESET}"
+        case _:
+            str_type = inp_rule.type
     inp_table.add_row([
         inp_pf.name,
         f"{inp_num + 1}",
         inp_rule.tracker,
-        inp_rule.type,
+        str_type,
         inp_rule.floating_full,
         inp_rule.descr_full,
         inp_rule.gateway_full,
@@ -29,7 +34,6 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
         str_destination,
         str_ports
     ])
-
 
 
 def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table, home):
@@ -106,8 +110,8 @@ if __name__ == '__main__':
         table.max_width["Description"] = 30
 
         for pf in PFs:
-        # if True:
-        #     pf = PFs[-1]
+            # if True:
+            #     pf = PFs[-1]
             num = 0
             filtered_rules = []
 

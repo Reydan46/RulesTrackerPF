@@ -377,7 +377,7 @@ class RulesPFSense:
             rule.gateway_full = rule.gateway
             rule.protocol_full = rule.protocol
             rule.descr_full = rule.descr
-            rule.type_full = rule.type
+            rule.type_full = self.full_type(rule.type)
             rule.interface_full = self.full_interface(rule.interface)
             rule.source_full = self.full_direction(rule.source)
             rule.destination_full = self.full_direction(rule.destination)
@@ -542,6 +542,15 @@ class RulesPFSense:
             open(os.path.join(filename), 'w', encoding='UTF-8').write(self.html)
         except Exception as e:
             logger.exception(f'Failed to save report. Error: {e}')
+
+    def full_type(self, type):
+        match type:
+            case 'reject':
+                return '<span class="not">REJECT</span>'
+            case 'block':
+                return '<span class="not">BLOCK</span>'
+            case _:
+                return type
 
 
 class PFSense:

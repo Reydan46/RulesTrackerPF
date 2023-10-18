@@ -9,8 +9,8 @@ from pfsense import PFSense
 
 
 def parse_search_query(query_string):
-    fields = ['pf', 'act', 'fl', 'desс', 'src', 'dst', 'port']
-    pattern = re.compile(r'(\w+)=([^\s]+)')
+    fields = ['pf', 'act', 'desc', 'src', 'dst', 'port']
+    pattern = re.compile(r'(\w+)=(\S+)')
     query_dict = {field: None for field in fields}
 
     matches = re.findall(pattern, query_string)
@@ -56,31 +56,60 @@ def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
     if rule.disabled != 'no':
         return False
 
-    if inp_query['act'] and not inp_query['act'] in rule.type:
-        return False
+    # Проверка pf
+    found_pf = True
+    if inp_query['pf']:
+        found_pf = False
+        if inp_query['pf'].lower() in inp_pf.name.lower():
+            found_pf = True
 
-    # TODO: Исправить поиск (учитывать одновременно source и dest)
-    find_rule = False
+    # Проверка action
+    found_act = True
+    if inp_query['act']:
+        found_act = False
+        if inp_query['act'].lower() in rule.type.lower():
+            found_act = True
+
+    # Проверка description
+    found_desc = True
+    if inp_query['desc']:
+        found_desc = False
+        if inp_query['desc'].lower() in rule.descr.lower():
+            found_desc = True
+
+    found_src = True
     if inp_query['src']:
-        ### Ищем совпадение в source правила
+        # Ищем совпадение в source правила
+        found_src = False
         for source in inp_rule.source_obj['direction']:
             ip_matched = source.ip_in_range(inp_query['src'])
             if ip_matched and (home or str(source) != '0.0.0.0/0'):
-                find_rule = True
+                found_src = True
         # Если найденный source имеет характеристику NOT ("!") - инвертируем результат поиска
         if inp_rule.source_obj['inverse']:
-            find_rule = not find_rule
+            found_src = not found_src
 
-    ### Если не найдено в source - ищем в destination
+    found_dst = True
     if inp_query['dst']:
-        if not find_rule:
-            for dest in inp_rule.destination_obj['direction']:
-                ip_matched = dest.ip_in_range(inp_query['dst'])
-                if ip_matched:
-                    find_rule = True
-            # Если найденный destination имеет характеристику NOT ("!") - инвертируем результат поиска
-            if inp_rule.destination_obj['inverse']:
-                find_rule = not find_rule
+        # Ищем совпадение в destination правила
+        found_dst = False
+        for dest in inp_rule.destination_obj['direction']:
+            ip_matched = dest.ip_in_range(inp_query['dst'])
+            if ip_matched:
+                found_dst = True
+        # Если найденный destination имеет характеристику NOT ("!") - инвертируем результат поиска
+        if inp_rule.destination_obj['inverse']:
+            found_dst = not found_dst
+
+    found_port = True
+    if inp_query['port']:
+        found_port = False
+        for port in inp_rule.destination_ports:
+            if inp_query['port'] in port:
+                found_port = True
+                break
+
+    find_rule = found_pf and found_act and found_desc and found_src and found_dst and found_port
 
     # Если поиск правила был успешен - заносим его в таблицу
     if find_rule:

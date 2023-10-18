@@ -32,7 +32,7 @@ class NetboxAPI:
         cls.roles = {}
         cache_file = "netbox_roles.pkl"
 
-        cache_data = cache_get(cache_file, hours=1)
+        cache_data = cache_get(cache_file, days=1)
         if cache_data is not None:
             logger.debug("Roles loaded from cache")
             cls.roles = cache_data
@@ -59,7 +59,7 @@ class NetboxAPI:
         devices = []
         cache_file = "netbox_devices.pkl"
 
-        cache_data = cache_get(cache_file, hours=1)
+        cache_data = cache_get(cache_file, days=1)
         if cache_data is not None:
             logger.debug("Devices loaded from cache")
             return cache_data

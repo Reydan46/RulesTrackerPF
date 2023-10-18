@@ -5,6 +5,7 @@ import xml.etree.ElementTree
 import paramiko
 from netaddr import IPAddress, IPNetwork
 
+from cache import cache_get, cache_set
 from log import logger
 
 
@@ -568,13 +569,11 @@ class PFSense:
         logger.info('Trying to download config...')
 
         # Проверка существования сегодняшнего файла конфигурации локально
-        now = datetime.datetime.now()
-        save_config_path = os.path.join(self.backup_path, f"configs\\{now.year}\\{now.month:02d}\\{now.day:02d}")
-        file_path = os.path.join(save_config_path, f"{self.ip}.xml")
-        if os.path.exists(file_path):
-            logger.debug(f"Config file {file_path} already exists, loading...")
-            with open(file_path, 'r') as file:
-                self.xml_str = file.read()
+        cache_file = f"pfsence_{self.ip}.pkl"
+        cache_data = cache_get(cache_file, hours=1)
+        if cache_data is not None:
+            logger.debug(f"Config file {self.ip} loaded from cache")
+            self.xml_str = cache_data
             return True
 
         # Загрузка файла конфигурации
@@ -586,10 +585,8 @@ class PFSense:
                     self.xml_str = sftp.file('/cf/conf/config.xml', 'r').read().decode('UTF-8')
 
             # Сохранение загруженного файла конфигурации
-            logger.debug(f"Config file loaded and saved to {file_path}")
-            os.makedirs(save_config_path, exist_ok=True)
-            with open(file_path, 'w') as file:
-                file.write(self.xml_str)
+            logger.debug(f"Config file {self.ip} loaded and saved to cache")
+            cache_set(self.xml_str, cache_file)
 
             return True
         except paramiko.AuthenticationException:

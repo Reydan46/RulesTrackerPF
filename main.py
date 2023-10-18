@@ -41,8 +41,8 @@ def check_rule(inp_rule, inp_ip, inp_num, inp_pf, inp_table, home):
     if rule.disabled != 'no':
         return False
 
-    ### Ищем совпадение в source правила
     find_rule = False
+    ### Ищем совпадение в source правила
     for source in inp_rule.source_obj['direction']:
         ip_matched = source.ip_in_range(inp_ip)
         if ip_matched and (home or str(source) != '0.0.0.0/0'):
@@ -123,8 +123,6 @@ if __name__ == '__main__':
                     home_pf = True
                     break
 
-            table.add_row(["-" * len(column) for column in table.field_names])
-
             # Обработка правил floating (quick)
             for rule in pf.config.filter:
                 if rule.floating_full == 'yes (quick)' and check_rule(rule, ip, num, pf, table, home_pf):
@@ -143,5 +141,8 @@ if __name__ == '__main__':
 
             pf.config.get_html(custom_rules=filtered_rules,
                                save=True, filename=f"report\\{pf.name}.html")
+
+            if filtered_rules and pf != PFs[-1]:
+                table.add_row(["-" * len(column) for column in table.field_names])
 
         print(table)

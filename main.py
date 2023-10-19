@@ -1,3 +1,4 @@
+import os
 import re
 from colorama import Fore
 from dotenv import load_dotenv
@@ -152,6 +153,7 @@ if __name__ == '__main__':
         try:
             query = input('Enter query: ')
             parsed_query = parse_search_query(query)
+            os.system('cls' if os.name == 'nt' else 'clear')
         except:
             print('\nProgram terminated by user')
             break

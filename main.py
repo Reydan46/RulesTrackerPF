@@ -43,12 +43,12 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
         inp_rule.tracker,
         str_type,
         inp_rule.floating_full,
-        inp_rule.descr_full,
         inp_rule.interface_full.replace("<br>", "\n"),
-        inp_rule.gateway_full,
         str_source,
         str_destination,
-        str_ports
+        str_ports,
+        inp_rule.gateway_full,
+        inp_rule.descr_full,
     ])
 
 
@@ -153,8 +153,8 @@ if __name__ == '__main__':
             break
 
         table = PrettyTable(
-            ["PF Name", "Num", "Tracker", "Action", "Floating", "Description", "Interface", "Gateway", "Source", "Destination",
-             "Ports"])
+            ["PF Name", "Num", "Tracker", "Action", "Floating", "Interface", "Source", "Destination", "Ports",
+             "Gateway", "Description"])
         # Включаем показ разделителей между строками таблицы
         table.hrules = 1
         # Ограничение ширины столбца "Description" до 20 символов

@@ -44,6 +44,7 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
         str_type,
         inp_rule.floating_full,
         inp_rule.descr_full,
+        inp_rule.interface_full.replace("<br>", "\n"),
         inp_rule.gateway_full,
         str_source,
         str_destination,
@@ -152,7 +153,7 @@ if __name__ == '__main__':
             break
 
         table = PrettyTable(
-            ["PF Name", "Num", "Tracker", "Action", "Floating", "Description", "Gateway", "Source", "Destination",
+            ["PF Name", "Num", "Tracker", "Action", "Floating", "Description", "Interface", "Gateway", "Source", "Destination",
              "Ports"])
         # Включаем показ разделителей между строками таблицы
         table.hrules = 1

@@ -30,6 +30,9 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
         [f"{Fore.RED if inp_rule.destination_obj['inverse'] else ''}{j}{Fore.RESET}" for j in
          inp_rule.destination_obj['direction']])
     str_ports = '\n'.join(inp_rule.destination_ports)
+    str_interface = ''
+    if inp_pf.config.interfaces[inp_rule.interface]:
+        str_interface = inp_pf.config.interfaces[inp_rule.interface].descr
     match inp_rule.type:
         case 'block':
             str_type = f"{Fore.RED}BLOCK{Fore.RESET}"
@@ -43,7 +46,7 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
         inp_rule.tracker,
         str_type,
         inp_rule.floating_full,
-        inp_rule.interface_full.replace("<br>", "\n"),
+        str_interface,
         str_source,
         str_destination,
         str_ports,
@@ -158,6 +161,7 @@ if __name__ == '__main__':
         # Включаем показ разделителей между строками таблицы
         table.hrules = 1
         # Ограничение ширины столбца "Description" до 20 символов
+        table.max_width["Action"] = 7
         table.max_width["Description"] = 30
 
         for pf in PFs:

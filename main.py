@@ -11,14 +11,16 @@ from pfsense import PFSense
 
 def parse_search_query(query_string):
     fields = ['pf', 'act', 'desc', 'src', 'dst', 'port']
-    pattern = re.compile(r'(\w+)=(\S+)')
+    pattern = re.compile(r'(\w+)=([+=\-])?(\S+)')
     query_dict = {field: None for field in fields}
 
     matches = re.findall(pattern, query_string)
     for match in matches:
-        key, value = match
+        key, method, value = match
+        if not method:
+            method = '+'
         if key in query_dict:
-            query_dict[key] = value
+            query_dict[key] = {'method': method, 'value': value}
 
     return query_dict
 
@@ -66,21 +68,21 @@ def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
     found_pf = True
     if inp_query['pf']:
         found_pf = False
-        if inp_query['pf'].lower() in inp_pf.name.lower():
+        if inp_query['pf']['value'].lower() in inp_pf.name.lower():
             found_pf = True
 
     # Проверка action
     found_act = True
     if inp_query['act']:
         found_act = False
-        if inp_query['act'].lower() in rule.type.lower():
+        if inp_query['act']['value'].lower() in rule.type.lower():
             found_act = True
 
     # Проверка description
     found_desc = True
     if inp_query['desc']:
         found_desc = False
-        if inp_query['desc'].lower() in rule.descr.lower():
+        if inp_query['desc']['value'].lower() in rule.descr.lower():
             found_desc = True
 
     found_src = True
@@ -88,7 +90,7 @@ def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
         # Ищем совпадение в source правила
         found_src = False
         for source in inp_rule.source_obj['direction']:
-            ip_matched = source.ip_in_range(inp_query['src'])
+            ip_matched = source.ip_in_range(inp_query['src']['value'])
             if ip_matched and (home or str(source) != '0.0.0.0/0'):
                 found_src = True
         # Если найденный source имеет характеристику NOT ("!") - инвертируем результат поиска
@@ -100,7 +102,7 @@ def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
         # Ищем совпадение в destination правила
         found_dst = False
         for dest in inp_rule.destination_obj['direction']:
-            ip_matched = dest.ip_in_range(inp_query['dst'])
+            ip_matched = dest.ip_in_range(inp_query['dst']['value'])
             if ip_matched:
                 found_dst = True
         # Если найденный destination имеет характеристику NOT ("!") - инвертируем результат поиска
@@ -109,11 +111,25 @@ def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
 
     found_port = True
     if inp_query['port']:
-        found_port = False
-        for port in inp_rule.destination_ports:
-            if inp_query['port'] in port:
+        match inp_query['port']['method']:
+            case '+':
+                found_port = False
+                for port in inp_rule.destination_ports:
+                    if inp_query['port']['value'] in port:
+                        found_port = True
+                        break
+            case '=':
+                found_port = False
+                for port in inp_rule.destination_ports:
+                    if inp_query['port']['value'] == port:
+                        found_port = True
+                        break
+            case '-':
                 found_port = True
-                break
+                for port in inp_rule.destination_ports:
+                    if inp_query['port']['value'] == port:
+                        found_port = False
+                        break
 
     find_rule = found_pf and found_act and found_desc and found_src and found_dst and found_port
 
@@ -153,6 +169,7 @@ if __name__ == '__main__':
         try:
             query = input('Enter query: ')
             parsed_query = parse_search_query(query)
+
             os.system('cls' if os.name == 'nt' else 'clear')
         except:
             print('\nProgram terminated by user')
@@ -180,10 +197,11 @@ if __name__ == '__main__':
                 home_pf = False
                 for interface in pf.config.interfaces:
                     ip_network_string = interface.get_ip_obj()
-                    if ip_network_string and IPAddress(parsed_query['src']) in IPNetwork(ip_network_string):
+                    if ip_network_string and IPAddress(parsed_query['src']['value']) in IPNetwork(ip_network_string):
                         home_pf = True
                         break
             else:
+                # Если source не указан - считаем домашними все PFSense
                 home_pf = True
 
             # Обработка правил floating (quick)

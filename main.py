@@ -5,13 +5,17 @@ from dotenv import load_dotenv
 from netaddr import IPAddress, IPNetwork
 from prettytable import PrettyTable
 
+from updater import check_update
 from netbox import NetboxAPI
 from pfsense import PFSense
 
+__github_update_url = 'https://raw.githubusercontent.com/Reydan46/RulesTrackerPF/master/'
+__current_version = '1.0'
 
 def parse_search_query(query_string):
+    success = True
     fields = ['pf', 'act', 'desc', 'src', 'dst', 'port']
-    pattern = re.compile(r'(\w+)=([+=\-])?(\S+)')
+    pattern = re.compile(r'(\w+)([+=!])?=(\S+)')
     query_dict = {field: None for field in fields}
 
     matches = re.findall(pattern, query_string)
@@ -21,8 +25,11 @@ def parse_search_query(query_string):
             method = '+'
         if key in query_dict:
             query_dict[key] = {'method': method, 'value': value}
+        else:
+            print(f"{Fore.RED}Invalid key: {key}{Fore.RESET}")
+            success = False
 
-    return query_dict
+    return query_dict, success
 
 
 def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
@@ -60,30 +67,30 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
 
 
 def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
+    def check_field(field, query_field):
+        found = True
+        if query_field:
+            match query_field['method']:
+                case '+':
+                    found = False
+                    if query_field['value'].lower() in field.lower():
+                        found = True
+                case '=':
+                    found = query_field['value'].lower() == field.lower()
+                case '!':
+                    found = query_field['value'].lower() != field.lower()
+        return found
+
     # Пропуск отключённых правил
     if rule.disabled != 'no':
         return False
 
     # Проверка pf
-    found_pf = True
-    if inp_query['pf']:
-        found_pf = False
-        if inp_query['pf']['value'].lower() in inp_pf.name.lower():
-            found_pf = True
-
+    found_pf = check_field(pf.name, inp_query['pf'])
     # Проверка action
-    found_act = True
-    if inp_query['act']:
-        found_act = False
-        if inp_query['act']['value'].lower() in rule.type.lower():
-            found_act = True
-
+    found_act = check_field(rule.type, inp_query['act'])
     # Проверка description
-    found_desc = True
-    if inp_query['desc']:
-        found_desc = False
-        if inp_query['desc']['value'].lower() in rule.descr.lower():
-            found_desc = True
+    found_desc = check_field(rule.descr, inp_query['desc'])
 
     found_src = True
     if inp_query['src']:
@@ -119,17 +126,9 @@ def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
                         found_port = True
                         break
             case '=':
-                found_port = False
-                for port in inp_rule.destination_ports:
-                    if inp_query['port']['value'] == port:
-                        found_port = True
-                        break
-            case '-':
-                found_port = True
-                for port in inp_rule.destination_ports:
-                    if inp_query['port']['value'] == port:
-                        found_port = False
-                        break
+                found_port = inp_query['port']['value'] in inp_rule.destination_ports
+            case '!':
+                found_port = inp_query['port']['value'] not in inp_rule.destination_ports
 
     find_rule = found_pf and found_act and found_desc and found_src and found_dst and found_port
 
@@ -141,6 +140,8 @@ def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
 
 
 if __name__ == '__main__':
+    check_update(__github_update_url, __current_version)
+
     router_devices = []
 
     # Загрузка переменных окружения из .env
@@ -168,12 +169,15 @@ if __name__ == '__main__':
     while True:
         try:
             query = input('Enter query: ')
-            parsed_query = parse_search_query(query)
+            parsed_query, parsed_success = parse_search_query(query)
 
             os.system('cls' if os.name == 'nt' else 'clear')
         except:
             print('\nProgram terminated by user')
             break
+        if not parsed_success:
+            input('Press Enter to continue...')
+            continue
 
         table = PrettyTable(
             ["PF Name", "Num", "Tracker", "Action", "Floating", "Interface", "Source", "Destination", "Ports",

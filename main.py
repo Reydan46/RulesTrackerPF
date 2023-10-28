@@ -1,5 +1,4 @@
 import os
-import re
 from colorama import Fore
 from dotenv import load_dotenv
 from netaddr import IPAddress, IPNetwork
@@ -8,28 +7,11 @@ from prettytable import PrettyTable
 from updater import check_update
 from netbox import NetboxAPI
 from pfsense import PFSense
+from input_query import setup_readline, parse_search_query
 
 __github_update_url = 'https://raw.githubusercontent.com/Reydan46/RulesTrackerPF/master/'
 __current_version = '1.0'
-
-def parse_search_query(query_string):
-    success = True
-    fields = ['pf', 'act', 'desc', 'src', 'dst', 'port']
-    pattern = re.compile(r'(\w+)([+=!])?=(\S+)')
-    query_dict = {field: None for field in fields}
-
-    matches = re.findall(pattern, query_string)
-    for match in matches:
-        key, method, value = match
-        if not method:
-            method = '+'
-        if key in query_dict:
-            query_dict[key] = {'method': method, 'value': value}
-        else:
-            print(f"{Fore.RED}Invalid key: {key}{Fore.RESET}")
-            success = False
-
-    return query_dict, success
+__commands = ['pf', 'act', 'desc', 'src', 'dst', 'port']
 
 
 def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
@@ -165,11 +147,12 @@ if __name__ == '__main__':
         pf.run()
         PFs.append(pf)
 
+    setup_readline(__commands)
     # Search Console
     while True:
         try:
             query = input('Enter query: ')
-            parsed_query, parsed_success = parse_search_query(query)
+            parsed_query, parsed_success = parse_search_query(query, __commands)
 
             os.system('cls' if os.name == 'nt' else 'clear')
         except:

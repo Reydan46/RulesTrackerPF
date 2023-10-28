@@ -8,3 +8,4 @@ report
 *.log
 *.pkl
 *.iml
+/test.py

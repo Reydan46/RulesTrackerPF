@@ -9,10 +9,8 @@ def parse_search_query(query_string, commands):
     query_dict = {field: None for field in commands}
 
     matches = re.findall(pattern, query_string)
-    for match in matches:
-        key, method, value = match
-        if not method:
-            method = '+'
+    for key, method, value in matches:
+        method = method if method else '+'
         if key in query_dict:
             query_dict[key] = {'method': method, 'value': value}
         else:
@@ -21,10 +19,12 @@ def parse_search_query(query_string, commands):
 
     return query_dict, success
 
+
 def setup_readline(commands):
     readline.set_completer(QueryCompleter(commands).complete)
     # Регистрация клавиши `tab` для автодополнения
     readline.parse_and_bind('tab: complete')
+
 
 class QueryCompleter():
     def __init__(self, options):
@@ -48,4 +48,3 @@ class QueryCompleter():
         except IndexError:
             response = None
         return response
-

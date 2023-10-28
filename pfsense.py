@@ -170,9 +170,9 @@ class ElementsPFSense:
 
     def __get_element_by_name(self, name: str):
         if self.search_name:
-            for element in self.elements:
-                if element.__getattribute__(self.search_name) == name:
-                    return element
+            elements_dict = {element.__getattribute__(self.search_name): element for element in self.elements}
+            return elements_dict.get(name)
+
 
 
 class InterfacePFSense(ElementPFSense):

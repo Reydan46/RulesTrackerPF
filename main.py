@@ -15,24 +15,31 @@ __commands = ['pf', 'act', 'desc', 'src', 'dst', 'port']
 
 
 def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
-    str_source = '\n'.join(
-        [f"{Fore.RED if inp_rule.source_obj['inverse'] else ''}{j}{Fore.RESET}" for j in
-         inp_rule.source_obj['direction']])
-    str_destination = '\n'.join(
-        [f"{Fore.RED if inp_rule.destination_obj['inverse'] else ''}{j}{Fore.RESET}" for j in
-         inp_rule.destination_obj['direction']])
-    str_ports = '\n'.join(inp_rule.destination_ports)
+    def format_direction(obj):
+        return '\n'.join(
+            [f"{Fore.RED if obj['inverse'] else ''}{j}{Fore.RESET}" for j in obj['direction']]
+        )
 
-    interface_list = inp_rule.interface.split(',')
-    str_interface = '\n'.join(
-        [inp_pf.config.interfaces[i].descr if inp_pf.config.interfaces[i] else i for i in interface_list])
-    match inp_rule.type:
-        case 'block':
-            str_type = f"{Fore.RED}BLOCK{Fore.RESET}"
-        case 'reject':
-            str_type = f"{Fore.RED}REJECT{Fore.RESET}"
-        case _:
-            str_type = inp_rule.type
+    def format_interfaces(pf, interfaces):
+        interface_list = interfaces.split(',')
+        return '\n'.join(
+            [pf.config.interfaces[i].descr if pf.config.interfaces[i] else i for i in interface_list]
+        )
+
+    def format_rule_type(rule_type):
+        match rule_type:
+            case 'block':
+                return f"{Fore.RED}BLOCK{Fore.RESET}"
+            case 'reject':
+                return f"{Fore.RED}REJECT{Fore.RESET}"
+            case _:
+                return rule_type
+
+    str_source = format_direction(inp_rule.source_obj)
+    str_destination = format_direction(inp_rule.destination_obj)
+    str_ports = '\n'.join(inp_rule.destination_ports)
+    str_interface = format_interfaces(inp_pf, inp_rule.interface)
+    str_type = format_rule_type(inp_rule.type)
     inp_table.add_row([
         inp_pf.name,
         f"{inp_num + 1}",
@@ -174,8 +181,6 @@ if __name__ == '__main__':
         table.max_width["Destination"] = 20
 
         for pf in PFs:
-            # if True:
-            #     pf = PFs[-1]
             num = 0
             filtered_rules = []
 

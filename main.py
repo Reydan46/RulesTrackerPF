@@ -3,6 +3,7 @@ from colorama import Fore
 from dotenv import load_dotenv
 from netaddr import IPAddress, IPNetwork
 from prettytable import PrettyTable
+import yaml
 
 from updater import check_update
 from netbox import NetboxAPI
@@ -14,6 +15,42 @@ __current_version = '1.0'
 __commands = ['pf', 'act', 'desc', 'src', 'dst', 'port']
 
 
+def read_settings(settings_path="settings.yaml"):
+    if os.path.exists(settings_path):
+        with open(settings_path, "r") as file:
+            settings_data = yaml.load(file, Loader=yaml.SafeLoader)
+    else:
+        settings_data = None
+    if settings_data is None:
+        settings_data = {
+            'cache':
+                {
+                    'netbox':
+                        {
+                            'roles':
+                                {
+                                    'days': 1, 'hours': 0, 'minutes': 0
+                                },
+                            'devices':
+                                {
+                                    'days': 1, 'hours': 0, 'minutes': 0
+                                }
+                        },
+                    'pfsense':
+                        {
+                            'config':
+                                {
+                                    'days': 0, 'hours': 1, 'minutes': 0
+                                }
+                        }
+                }
+        }
+        with open(settings_path, "w") as file:
+            yaml.dump(settings_data, file)
+
+    return settings_data
+
+
 def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
     def format_direction(obj):
         return '\n'.join(
@@ -23,7 +60,7 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
     def format_interfaces(pf, interfaces):
         interface_list = interfaces.split(',')
         return '\n'.join(
-            [pf.config.interfaces[i].descr if pf.config.interfaces[i] else i for i in interface_list]
+            [pf.settings.interfaces[i].descr if pf.settings.interfaces[i] else i for i in interface_list]
         )
 
     def format_rule_type(rule_type):
@@ -131,10 +168,13 @@ def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
 if __name__ == '__main__':
     check_update(__github_update_url, __current_version)
 
-    router_devices = []
+    settings = read_settings()
 
+    router_devices = []
     # Загрузка переменных окружения из .env
     load_dotenv(dotenv_path='.env')
+    # Установка настроек
+    NetboxAPI.settings = settings
     # Создание подключения с NetBox
     if NetboxAPI.create_connection():
         # Получение ролей устройств с NetBox
@@ -143,6 +183,7 @@ if __name__ == '__main__':
             router_devices = NetboxAPI.get_devices(
                 role=NetboxAPI.roles['Router'])
 
+    PFSense.settings = settings
     PFs = []
     # if True:
     #     router = router_devices[1]

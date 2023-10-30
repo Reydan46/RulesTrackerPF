@@ -8,4 +8,5 @@ report
 *.log
 *.pkl
 *.iml
-/test.py
+test.py
+settings.yaml

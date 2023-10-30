@@ -174,7 +174,6 @@ class ElementsPFSense:
             return elements_dict.get(name)
 
 
-
 class InterfacePFSense(ElementPFSense):
     def __init__(self, xml_tree: xml.etree.ElementTree.Element):
         super().__init__(xml_tree,
@@ -469,9 +468,11 @@ class RulesPFSense:
 </head>
 <body>
     <style>
-    table{width:100%;margin:0 auto;clear:both;border-collapse:separate;border-spacing:0;border:1px solid #ababab;font-size:12px}
+    table{width:100%;margin:0 auto;clear:both;border-collapse:separate;border-spacing:0;border:1px solid #ababab;
+    font-size:12px}
     table thead td,table thead th{padding:10px;border-bottom:1px solid rgba(0,0,0,.3)}
-    tbody tr:first-child td{border-top:none}tbody td{border-top:1px solid rgba(0,0,0,.15)}td,th{border-style:solid;text-align:center!important}
+    tbody tr:first-child td{border-top:none}tbody td{border-top:1px solid rgba(0,0,0,.15)}td,th{border-style:solid;
+    text-align:center!important}
     tr:hover{background:#ffeb0052!important}
     .disabled{background:repeating-linear-gradient(45deg,transparent 0 5px,#00000014 0 10px);color:#a7a7a7}
     .disabled:hover{background:repeating-linear-gradient(45deg,transparent 0 5px,#00000014 0 10px)!important;color:#000}
@@ -544,22 +545,26 @@ class RulesPFSense:
         except Exception as e:
             logger.exception(f'Failed to save report. Error: {e}')
 
-    def full_type(self, type):
-        match type:
+    @staticmethod
+    def full_type(str_type):
+        match str_type:
             case 'reject':
                 return '<span class="not">REJECT</span>'
             case 'block':
                 return '<span class="not">BLOCK</span>'
             case _:
-                return type
+                return str_type
 
 
 class PFSense:
+    settings = None
+
     def __init__(self, name: str, ip: str, port: int = 22, backup_path: str = '') -> None:
+        self.config = None
+        self.config: RulesPFSense
         self.ip: str = ip
         self.port: int = port
         self.backup_path: str = backup_path or os.path.dirname(os.path.abspath(__file__))
-        self.config: RulesPFSense
         self.xml_str: str = ''
         self.xml_tree = None
         self.name: str = name
@@ -570,7 +575,12 @@ class PFSense:
 
         # Проверка существования сегодняшнего файла конфигурации локально
         cache_file = f"pfsence_{self.ip}.pkl"
-        cache_data = cache_get(cache_file, hours=1)
+        cache_data = cache_get(
+            cache_file,
+            days=self.settings['cache']['pfsense']['config']['days'],
+            hours=self.settings['cache']['pfsense']['config']['hours'],
+            minutes=self.settings['cache']['pfsense']['config']['minutes']
+        )
         if cache_data is not None:
             logger.debug(f"Config file {self.ip} loaded from cache")
             self.xml_str = cache_data

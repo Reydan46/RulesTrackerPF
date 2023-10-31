@@ -4,7 +4,7 @@ import readline
 
 
 def parse_search_query(query_string, commands):
-    success = True
+    success = False
     pattern = re.compile(r'(\w+)([+=!])?=(\S+)')
     query_dict = {field: None for field in commands}
 
@@ -13,6 +13,7 @@ def parse_search_query(query_string, commands):
         method = method if method else '+'
         if key in query_dict:
             query_dict[key] = {'method': method, 'value': value}
+            success = True
         else:
             print(f"{Fore.RED}Invalid key: {key}{Fore.RESET}")
             success = False
@@ -43,7 +44,7 @@ class QueryCompleter():
         # Вернуть элемент состояния из списка совпадений,
         # если их много.
         try:
-            response = self.matches[state] + '='
+            response = self.matches[state]
         except IndexError:
             response = None
         return response

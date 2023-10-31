@@ -16,34 +16,29 @@ __commands = ['pf', 'act', 'desc', 'src', 'dst', 'port']
 
 
 def read_settings(settings_path="settings.yaml"):
-    if os.path.exists(settings_path):
+    try:
         with open(settings_path, "r") as file:
             settings_data = yaml.load(file, Loader=yaml.SafeLoader)
-    else:
+    except FileNotFoundError:
         settings_data = None
+
     if settings_data is None:
         settings_data = {
-            'cache':
-                {
-                    'netbox':
-                        {
-                            'roles':
-                                {
-                                    'days': 1, 'hours': 0, 'minutes': 0
-                                },
-                            'devices':
-                                {
-                                    'days': 1, 'hours': 0, 'minutes': 0
-                                }
-                        },
-                    'pfsense':
-                        {
-                            'config':
-                                {
-                                    'days': 0, 'hours': 1, 'minutes': 0
-                                }
-                        }
+            'cache': {
+                'netbox': {
+                    'roles': {
+                        'days': 1, 'hours': 0, 'minutes': 0
+                    },
+                    'devices': {
+                        'days': 1, 'hours': 0, 'minutes': 0
+                    }
+                },
+                'pfsense': {
+                    'config': {
+                        'days': 0, 'hours': 1, 'minutes': 0
+                    }
                 }
+            }
         }
         with open(settings_path, "w") as file:
             yaml.dump(settings_data, file)
@@ -60,7 +55,7 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
     def format_interfaces(pf, interfaces):
         interface_list = interfaces.split(',')
         return '\n'.join(
-            [pf.settings.interfaces[i].descr if pf.settings.interfaces[i] else i for i in interface_list]
+            [pf.config.interfaces[i].descr if pf.config.interfaces[i] else i for i in interface_list]
         )
 
     def format_rule_type(rule_type):
@@ -195,8 +190,9 @@ if __name__ == '__main__':
         pf.run()
         PFs.append(pf)
 
+    # Инициализация автозаполнения команд
     setup_readline(__commands)
-    # Search Console
+    # Поиск
     while True:
         try:
             query = input('Enter query: ')

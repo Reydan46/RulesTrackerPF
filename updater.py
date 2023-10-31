@@ -1,5 +1,4 @@
 import requests
-import subprocess
 import sys
 import os
 from log import logger
@@ -44,11 +43,8 @@ def update_files(updated_version, github_update_url):
             except Exception as e:
                 logger.warning(f"No write access to the directory: {directory}. Error: {e}")
 
-        logger.info(f"Restarting script with version {updated_version}")
-        python_path = sys.executable
-        script_path = os.path.abspath(sys.argv[0])
-        subprocess.Popen([python_path, script_path])
-        sys.exit()
+        logger.info(f"Exiting from script. Restart manual with version {updated_version}")
+        sys.exit(0)
     except requests.RequestException as e:
         logger.error(f"Request error: {e}")
     except Exception as e:

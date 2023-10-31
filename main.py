@@ -46,8 +46,11 @@ def read_settings(settings_path="settings.yaml"):
     return settings_data
 
 
-def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
-    def format_direction(obj):
+def format_rule(inp_pf, inp_rule, inp_num, csv=False):
+    def format_direction(obj, csv=False):
+        if csv:
+            return f"{'!' if obj['inverse'] else ''}" + ','.join([f"{j}" for j in obj['direction']]
+                                                                  )
         return '\n'.join(
             [f"{Fore.RED if obj['inverse'] else ''}{j}{Fore.RESET}" for j in obj['direction']]
         )
@@ -58,7 +61,10 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
             [pf.config.interfaces[i].descr if pf.config.interfaces[i] else i for i in interface_list]
         )
 
-    def format_rule_type(rule_type):
+    def format_rule_type(rule_type, csv=False):
+        if csv:
+            return rule_type
+
         match rule_type:
             case 'block':
                 return f"{Fore.RED}BLOCK{Fore.RESET}"
@@ -67,24 +73,26 @@ def add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table):
             case _:
                 return rule_type
 
-    str_source = format_direction(inp_rule.source_obj)
-    str_destination = format_direction(inp_rule.destination_obj)
-    str_ports = '\n'.join(inp_rule.destination_ports)
+    str_source = format_direction(inp_rule.source_obj, csv)
+    str_destination = format_direction(inp_rule.destination_obj, csv)
+    if csv:
+        str_ports = ','.join(inp_rule.destination_ports)
+    else:
+        str_ports = '\n'.join(inp_rule.destination_ports)
     str_interface = format_interfaces(inp_pf, inp_rule.interface)
-    str_type = format_rule_type(inp_rule.type)
-    inp_table.add_row([
-        inp_pf.name,
-        f"{inp_num + 1}",
-        inp_rule.tracker,
-        str_type,
-        inp_rule.floating_full,
-        str_interface,
-        str_source,
-        str_destination,
-        str_ports,
-        inp_rule.gateway_full,
-        inp_rule.descr_full,
-    ])
+    str_type = format_rule_type(inp_rule.type, csv)
+
+    return [inp_pf.name,
+            f"{inp_num + 1}",
+            inp_rule.tracker,
+            str_type,
+            inp_rule.floating_full,
+            str_interface,
+            str_source,
+            str_destination,
+            str_ports,
+            inp_rule.gateway_full,
+            inp_rule.descr_full]
 
 
 def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
@@ -155,7 +163,7 @@ def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
 
     # Если поиск правила был успешен - заносим его в таблицу
     if find_rule:
-        add_rule_to_table(inp_pf, inp_rule, inp_num, inp_table)
+        inp_table.add_row(format_rule(inp_pf, inp_rule, inp_num))
 
     return find_rule
 
@@ -206,9 +214,9 @@ if __name__ == '__main__':
             input('Press Enter to continue...')
             continue
 
-        table = PrettyTable(
-            ["PF Name", "Num", "Tracker", "Action", "Floating", "Interface", "Source", "Destination", "Ports",
-             "Gateway", "Description"])
+        header = ["PF Name", "Num", "Tracker", "Action", "Floating", "Interface", "Source", "Destination", "Ports",
+                  "Gateway", "Description"]
+        table = PrettyTable(header)
         # Включаем показ разделителей между строками таблицы
         table.hrules = 1
         # Ограничение ширины столбца "Description" до 20 символов
@@ -252,6 +260,11 @@ if __name__ == '__main__':
 
             pf.config.get_html(custom_rules=filtered_rules,
                                save=True, filename=f"report\\{pf.name}.html")
+
+            with open(f"report\\{pf.name}.csv", "w") as f:
+                f.write(';'.join(header) + '\n')
+                for rule in filtered_rules:
+                    f.write(';'.join(format_rule(pf, rule, num, csv=True)) + '  \n')
 
             if filtered_rules and pf != PFs[-1]:
                 table.add_row(["-" * len(column) for column in table.field_names])

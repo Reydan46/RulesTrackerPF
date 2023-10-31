@@ -50,7 +50,7 @@ def format_rule(inp_pf, inp_rule, inp_num, csv=False):
     def format_direction(obj, csv=False):
         if csv:
             return f"{'!' if obj['inverse'] else ''}" + ','.join([f"{j}" for j in obj['direction']]
-                                                                  )
+                                                                 )
         return '\n'.join(
             [f"{Fore.RED if obj['inverse'] else ''}{j}{Fore.RESET}" for j in obj['direction']]
         )
@@ -263,9 +263,10 @@ if __name__ == '__main__':
                     num += 1
 
             pf.config.get_html(custom_rules=filtered_rules,
-                               save=True, filename=f"report\\{pf.name}.html")
+                               save=True, filename=f"report\\html\\{pf.name}.html")
 
-            with open(f"report\\{pf.name}.csv", "w") as f:
+            os.makedirs("report\\csv", exist_ok=True)
+            with open(f"report\\csv\\{pf.name}.csv", "w") as f:
                 f.write(';'.join(header) + '\n')
                 for rule in filtered_rules:
                     f.write(';'.join(format_rule(pf, rule, num, csv=True)) + '  \n')

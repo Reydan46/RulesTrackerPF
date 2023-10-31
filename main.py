@@ -55,8 +55,12 @@ def format_rule(inp_pf, inp_rule, inp_num, csv=False):
             [f"{Fore.RED if obj['inverse'] else ''}{j}{Fore.RESET}" for j in obj['direction']]
         )
 
-    def format_interfaces(pf, interfaces):
+    def format_interfaces(pf, interfaces, csv=False):
         interface_list = interfaces.split(',')
+        if csv:
+            return ','.join(
+                [pf.config.interfaces[i].descr if pf.config.interfaces[i] else i for i in interface_list]
+            )
         return '\n'.join(
             [pf.config.interfaces[i].descr if pf.config.interfaces[i] else i for i in interface_list]
         )

@@ -11,7 +11,7 @@ from pfsense import PFSense
 from input_query import setup_readline, parse_search_query
 
 __github_update_url = 'https://raw.githubusercontent.com/Reydan46/RulesTrackerPF/master/'
-__current_version = '1.0'
+__current_version = '1.01'
 __commands = ['pf', 'act', 'desc', 'src', 'dst', 'port']
 
 

@@ -83,7 +83,7 @@ def format_rule(inp_pf, inp_rule, inp_num, csv=False):
         str_ports = ','.join(inp_rule.destination_ports)
     else:
         str_ports = '\n'.join(inp_rule.destination_ports)
-    str_interface = format_interfaces(inp_pf, inp_rule.interface)
+    str_interface = format_interfaces(inp_pf, inp_rule.interface, csv)
     str_type = format_rule_type(inp_rule.type, csv)
 
     return [inp_pf.name,

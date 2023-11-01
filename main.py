@@ -1,14 +1,20 @@
 import os
-from colorama import Fore
 from dotenv import load_dotenv
 from netaddr import IPAddress, IPNetwork
 from prettytable import PrettyTable
 import yaml
 
-from updater import check_update
-from netbox import NetboxAPI
-from pfsense import PFSense
-from input_query import setup_readline, parse_search_query
+from modules.rule.check import check_rule
+from modules.rule.format import format_rule
+from modules.updater import check_update
+from modules.service.netbox import NetboxAPI
+from modules.service.pfsense import PFSense
+from modules.input_query import setup_readline, parse_search_query
+# Fix Ctrl+C for IntelliJ IDEA
+try:
+    from console_thrift import KeyboardInterruptException as KeyboardInterrupt
+except ImportError:
+    pass
 
 __github_update_url = 'https://raw.githubusercontent.com/Reydan46/RulesTrackerPF/master/'
 __current_version = '1.01'
@@ -46,130 +52,6 @@ def read_settings(settings_path="settings.yaml"):
     return settings_data
 
 
-def format_rule(inp_pf, inp_rule, inp_num, csv=False):
-    def format_direction(obj, csv=False):
-        if csv:
-            return f"{'!' if obj['inverse'] else ''}" + ','.join([f"{j}" for j in obj['direction']]
-                                                                 )
-        return '\n'.join(
-            [f"{Fore.RED if obj['inverse'] else ''}{j}{Fore.RESET}" for j in obj['direction']]
-        )
-
-    def format_interfaces(pf, interfaces, csv=False):
-        interface_list = interfaces.split(',')
-        if csv:
-            return ','.join(
-                [pf.config.interfaces[i].descr if pf.config.interfaces[i] else i for i in interface_list]
-            )
-        return '\n'.join(
-            [pf.config.interfaces[i].descr if pf.config.interfaces[i] else i for i in interface_list]
-        )
-
-    def format_rule_type(rule_type, csv=False):
-        if csv:
-            return rule_type
-
-        match rule_type:
-            case 'block':
-                return f"{Fore.RED}BLOCK{Fore.RESET}"
-            case 'reject':
-                return f"{Fore.RED}REJECT{Fore.RESET}"
-            case _:
-                return rule_type
-
-    str_source = format_direction(inp_rule.source_obj, csv)
-    str_destination = format_direction(inp_rule.destination_obj, csv)
-    if csv:
-        str_ports = ','.join(inp_rule.destination_ports)
-    else:
-        str_ports = '\n'.join(inp_rule.destination_ports)
-    str_interface = format_interfaces(inp_pf, inp_rule.interface, csv)
-    str_type = format_rule_type(inp_rule.type, csv)
-
-    return [inp_pf.name,
-            f"{inp_num + 1}",
-            inp_rule.tracker,
-            str_type,
-            inp_rule.floating_full,
-            str_interface,
-            str_source,
-            str_destination,
-            str_ports,
-            inp_rule.gateway_full,
-            inp_rule.descr_full]
-
-
-def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
-    def check_field(field, query_field):
-        found = True
-
-        if not query_field:
-            return found
-
-        match query_field['method']:
-            case '+':
-                found = query_field['value'].lower() in field.lower()
-            case '=':
-                found = query_field['value'].lower() == field.lower()
-            case '!':
-                found = query_field['value'].lower() != field.lower()
-        return found
-
-    # Пропуск отключённых правил
-    if rule.disabled != 'no':
-        return False
-
-    # Проверка pf
-    found_pf = check_field(pf.name, inp_query['pf'])
-    # Проверка action
-    found_act = check_field(rule.type, inp_query['act'])
-    # Проверка description
-    found_desc = check_field(rule.descr, inp_query['desc'])
-
-    found_src = True
-    if inp_query['src']:
-        # Ищем совпадение в source правила
-        found_src = False
-        for source in inp_rule.source_obj['direction']:
-            ip_matched = source.ip_in_range(inp_query['src']['value'])
-            if ip_matched and (home or str(source) != '0.0.0.0/0'):
-                found_src = True
-        # Если найденный source имеет характеристику NOT ("!") - инвертируем результат поиска
-        if inp_rule.source_obj['inverse']:
-            found_src = not found_src
-
-    found_dst = True
-    if inp_query['dst']:
-        # Ищем совпадение в destination правила
-        found_dst = False
-        for dest in inp_rule.destination_obj['direction']:
-            ip_matched = dest.ip_in_range(inp_query['dst']['value'])
-            if ip_matched:
-                found_dst = True
-        # Если найденный destination имеет характеристику NOT ("!") - инвертируем результат поиска
-        if inp_rule.destination_obj['inverse']:
-            found_dst = not found_dst
-
-    found_port = True
-    if inp_query['port']:
-        match inp_query['port']['method']:
-            case '+':
-                found = [inp_query['port']['value'] in port for port in inp_rule.destination_ports]
-                found_port = True if not found else any(found)
-            case '=':
-                found_port = inp_query['port']['value'] in inp_rule.destination_ports
-            case '!':
-                found_port = inp_query['port']['value'] not in inp_rule.destination_ports
-
-    find_rule = found_pf and found_act and found_desc and found_src and found_dst and found_port
-
-    # Если правило подошло под критерии - заносим его в таблицу
-    if find_rule:
-        inp_table.add_row(format_rule(inp_pf, inp_rule, inp_num))
-
-    return find_rule
-
-
 if __name__ == '__main__':
     check_update(__github_update_url, __current_version)
 
@@ -190,8 +72,6 @@ if __name__ == '__main__':
 
     PFSense.settings = settings
     PFs = []
-    # if True:
-    #     router = router_devices[1]
     for router in router_devices:
         pf = PFSense(
             ip=router.primary_ip4.address.split('/')[0],
@@ -209,7 +89,7 @@ if __name__ == '__main__':
             parsed_query, parsed_success = parse_search_query(query, __commands)
 
             os.system('cls' if os.name == 'nt' else 'clear')
-        except:
+        except KeyboardInterrupt:
             print('\nProgram terminated by user')
             break
         if not parsed_success:

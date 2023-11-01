@@ -1,9 +1,10 @@
 main.py
-updater.py
-log.py
-cache.py
-netbox.py
-pfsense.py
-pfsense.py
-input_query.py
+modules/cache.py
+modules/input_query.py
+modules/log.py
+modules/updater.py
+modules/rule/check.py
+modules/rule/format.py
+modules/service/netbox.py
+modules/service/pfsense.py
 requirements.txt

@@ -3,8 +3,8 @@ import os
 import pynetbox
 import pynetbox.core.response
 
-from cache import cache_get, cache_set
-from log import logger
+from modules.cache import cache_get, cache_set
+from modules.log import logger
 
 
 class NetboxAPI:

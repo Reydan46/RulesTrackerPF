@@ -1,7 +1,7 @@
 import requests
 import sys
 import os
-from log import logger
+from modules.log import logger
 
 
 def check_update(github_update_url, current_version):

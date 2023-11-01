@@ -102,16 +102,17 @@ def format_rule(inp_pf, inp_rule, inp_num, csv=False):
 def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
     def check_field(field, query_field):
         found = True
-        if query_field:
-            match query_field['method']:
-                case '+':
-                    found = False
-                    if query_field['value'].lower() in field.lower():
-                        found = True
-                case '=':
-                    found = query_field['value'].lower() == field.lower()
-                case '!':
-                    found = query_field['value'].lower() != field.lower()
+
+        if not query_field:
+            return found
+
+        match query_field['method']:
+            case '+':
+                found = query_field['value'].lower() in field.lower()
+            case '=':
+                found = query_field['value'].lower() == field.lower()
+            case '!':
+                found = query_field['value'].lower() != field.lower()
         return found
 
     # Пропуск отключённых правил
@@ -153,11 +154,8 @@ def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
     if inp_query['port']:
         match inp_query['port']['method']:
             case '+':
-                found_port = False
-                for port in inp_rule.destination_ports:
-                    if inp_query['port']['value'] in port:
-                        found_port = True
-                        break
+                found = [inp_query['port']['value'] in port for port in inp_rule.destination_ports]
+                found_port = True if not found else any(found)
             case '=':
                 found_port = inp_query['port']['value'] in inp_rule.destination_ports
             case '!':
@@ -165,7 +163,7 @@ def check_rule(inp_rule, inp_query, inp_num, inp_pf, inp_table, home):
 
     find_rule = found_pf and found_act and found_desc and found_src and found_dst and found_port
 
-    # Если поиск правила был успешен - заносим его в таблицу
+    # Если правило подошло под критерии - заносим его в таблицу
     if find_rule:
         inp_table.add_row(format_rule(inp_pf, inp_rule, inp_num))
 

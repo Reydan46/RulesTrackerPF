@@ -1,4 +1,3 @@
-main.py
 modules/cache.py
 modules/input_query.py
 modules/log.py
@@ -7,4 +6,5 @@ modules/rule/check.py
 modules/rule/format.py
 modules/service/netbox.py
 modules/service/pfsense.py
+main.py
 requirements.txt

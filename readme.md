@@ -16,7 +16,7 @@ Script to connect PFSense rule filtering by specified search criteria.
 3. After the first run, a settings.yaml file will be created containing the caching time of the data received from NetBox and pfSense
 
 # Install
-1. Install Python 3.12 (or higher)
+1. Install Python 3.10 (or higher)
 2. Download and unzip the [Install.zip](https://github.com/Reydan46/RulesTrackerPF/releases/download/Install/Install.zip) file
 3. Generate a token from NetBox
     * Go to the netbox website

@@ -2,12 +2,12 @@
 Script to connect PFSense rule filtering by specified search criteria.
 
 # Settings .env
-| Value | Description | Example |
-| ----------- | ----------- | ----------- |
-| PFSENSE_LOGIN | pfSense user name | sftp-user |
-| PFSENSE_PASSWORD | PfSense user password | P@ssw0rd |
-| NETBOX_URL | NetBox server URL | http://netbox:8080 |
-| NETBOX_TOKEN | Token to connect to NetBox | 11d41abff2560c1cd7835a294c8284dfcaa62c72 |
+| Value            | Description                | Example                                  |
+|------------------|----------------------------|------------------------------------------|
+| PFSENSE_LOGIN    | pfSense user name          | sftp-user                                |
+| PFSENSE_PASSWORD | PfSense user password      | P@ssw0rd                                 |
+| NETBOX_URL       | NetBox server URL          | http://netbox:8080                       |
+| NETBOX_TOKEN     | Token to connect to NetBox | 11d41abff2560c1cd7835a294c8284dfcaa62c72 |
 
 
 # Notes
@@ -29,24 +29,24 @@ Script to connect PFSense rule filtering by specified search criteria.
       * chmod +x start.sh
       * ./start.sh
     * Windows:
-      * Right click on the file start.ps1
+      * Right-click on the file start.ps1
       * Run with PowerShell
 5. After installation, re-run the start script
 
 # Forming a search request
 ### Possible search fields
-| Field | Description | Example search | Available search types |
-| ----------- | ----------- | ----------- | ----------- |
-| pf | Name of pfSense server from NetBox | pf=srv-pf | +=, !=, == |
-| act | Rule Field  Action | act=pass | +=, !=, == |
-| desc | Rule Field  Description | desc=test | +=, !=, == |
-| src | Rule Field  Source | src=10.10.10.1 | += |
-| dst | Rule Field  Destination | dst=10.10.10.1 | += |
-| port | Rule Field  Destination Port | port=22 | +=, !=, == |
+| Field | Description                        | Example search | Available search types |
+|-------|------------------------------------|----------------|------------------------|
+| pf    | Name of pfSense server from NetBox | pf=srv-pf      | +=, !=, ==             |
+| act   | Rule Field  Action                 | act=pass       | +=, !=, ==             |
+| desc  | Rule Field  Description            | desc=test      | +=, !=, ==             |
+| src   | Rule Field  Source                 | src=10.10.10.1 | +=                     |
+| dst   | Rule Field  Destination            | dst=10.10.10.1 | +=                     |
+| port  | Rule Field  Destination Port       | port=22        | +=, !=, ==             |
 ### Possible search types
 | Type | Description | Example search | What will be found |
-| ----------- | ----------- | ----------- | ----------- |
-| += | Incoming | port=22 | any, 22, 5222 |
-| = | Same as = | port=22 | any, 22, 5222 |
-| == | Match | port=22 | 22 | 22 |
-| != | Exception | port=22 | any, 5222 |
+|------|-------------|----------------|--------------------|
+| +=   | Incoming    | port=22        | any, 22, 5222      |
+| =    | Same as =   | port=22        | any, 22, 5222      |
+| ==   | Match       | port=22        | 22                 |
+| !=   | Exception   | port=22        | any, 5222          |

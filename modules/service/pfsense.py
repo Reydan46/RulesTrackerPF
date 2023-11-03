@@ -415,13 +415,13 @@ class RulesPFSense:
                 case 'address':
                     address += self.get_obj_alias(i['value'])
                     if not address[-1]:
-                        logger.debug(f'[address] {i['value']}')
+                        logger.debug(f'[address] {i["value"]}')
                         logger.debug(f'[address] {address[-1]}')
                 # [{'type': 'network', 'value': 'opt1'}]
                 case 'network':
                     address.append(self.get_obj_interface(i['value']))
                     if not address[-1]:
-                        logger.debug(f'[network] {i['value']}')
+                        logger.debug(f'[network] {i["value"]}')
                         logger.debug(f'[network] {address[-1]}')
                 # [{'type': 'any', 'value': ''}]
                 case 'any':

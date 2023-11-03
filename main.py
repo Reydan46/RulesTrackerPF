@@ -17,7 +17,7 @@ except ImportError:
     pass
 
 __github_update_url = 'https://raw.githubusercontent.com/Reydan46/RulesTrackerPF/master/'
-__current_version = '1.01'
+__current_version = '1.02'
 __commands = ['pf', 'act', 'desc', 'src', 'dst', 'port']
 
 

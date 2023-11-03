@@ -29,10 +29,10 @@ def setup_readline(commands):
 
 class QueryCompleter():
     def __init__(self, options):
+        self.matches = None
         self.options = sorted(options)
 
     def complete(self, text, state):
-        response = None
         if state == 0:
             # Создание списка соответствий.
             if text:

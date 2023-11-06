@@ -27,7 +27,7 @@ def setup_readline(commands):
     readline.parse_and_bind('tab: complete')
 
 
-class QueryCompleter():
+class QueryCompleter:
     def __init__(self, options):
         self.matches = None
         self.options = sorted(options)

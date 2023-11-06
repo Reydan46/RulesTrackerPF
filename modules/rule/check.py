@@ -41,8 +41,8 @@ def check_direction_match(inp_direction, query_field, home=True):
         bool: True, если найдено совпадение, в противном случае False.
     """
 
-    def flag_search(item, home, value):
-        return home or str(item) != '0.0.0.0/0' or '0.0.0.0' in value
+    def flag_search(item, inp_home, inp_value):
+        return inp_home or str(item) != '0.0.0.0/0' or '0.0.0.0' in inp_value
 
     if not query_field:
         return True
@@ -55,7 +55,7 @@ def check_direction_match(inp_direction, query_field, home=True):
         '!': all(not (flag_search(item, home, value) and item.ip_in_range(value)) for item in direction)
     }
     found = methods.get(query_field['method'], True)
-    if inp_direction['inverse']:
+    if inp_direction['inverse'] and query_field['method'] != '=':
         found = not found
     return found
 

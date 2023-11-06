@@ -12,6 +12,7 @@ NETWORK_ANY_STR = '0.0.0.0/0'
 NETWORK_ANY = IPNetwork(NETWORK_ANY_STR)
 NETWORK_SELF = IPNetwork('127.0.0.1/32')
 
+
 class NetPoint:
     network = None
     url = None
@@ -342,38 +343,39 @@ class RulesPFSense:
         # Итоговый словарь
         # {"inverse": inverse, "address": address, "port": port}
 
-        name_address = ''
+        name_address = address.get('value', '')
         value_address = ''
-        name_port = ''
+        name_port = port.get('value', '')
         value_port = ''
-        if address:
-            if address['direction'] == 'address':
-                name_address = address['value'].split(':')[0]
-                value_address = address['value']
-            else:
-                name_address = address['value']
-        if port:
-            if port['direction'] == 'port':
-                name_port = port['value'].split(':')[0]
-                value_port = port['value']
-            else:
-                name_port = port['value']
+
+        if address.get('direction') == 'address':
+            name_address = address['value'].split(':')[0]
+            value_address = address['value']
+
+        if port.get('direction') == 'port':
+            name_port = port['value'].split(':')[0]
+            value_port = port['value']
 
         output = ''
-        if inverse:
-            output = '<span class="not">NOT </span>'
+        output += '<span class="not">NOT </span>' if inverse else ''
+
         if name_address:
-            if name_address != value_address and value_address:
-                output += f'<span title="{value_address}">{name_address}</span>'
-            else:
-                output += name_address
+            output += (
+                f'<span title="{value_address}">{name_address}</span>'
+                if name_address != value_address and value_address
+                else name_address
+            )
+
         if name_address and name_port:
             output += ' &#8594; '
+
         if name_port:
-            if name_port != value_port and value_port:
-                output += f'<span title="{value_port}">{name_port}</span>'
-            else:
-                output += name_port
+            output += (
+                f'<span title="{value_port}">{name_port}</span>'
+                if name_port != value_port and value_port
+                else name_port
+            )
+
         return output
 
     @staticmethod
@@ -447,18 +449,20 @@ class RulesPFSense:
 
         for i in direction:
             match i['type']:
-                # [{'type': 'address', 'value': '10.10.10.7'}]
-                # [{'type': 'address', 'value': '10.10.11.0/26'}]
-                # [{'type': 'address', 'value': 'vcenter_ip'}]
+                # List[Dict[type:str, value:str]]
                 case 'address':
+                    # value: 10.10.10.7
+                    # value: 10.10.11.0/26
+                    # value: vcenter_ip
                     address += self.get_obj_alias(i['value'])
                     log_debug_message(address[-1], i["value"], "address")
-                # [{'type': 'network', 'value': 'opt1'}]
                 case 'network':
+                    # value: opt1
                     address.append(self.get_obj_interface(i['value']))
                     log_debug_message(address[-1], i["value"], "network")
                 # [{'type': 'any', 'value': ''}]
                 case 'any':
+                    # value: ''
                     if rule.interface and path == 'src':
                         address.extend([NETWORK_ANY_STR if source == 'all' else self.get_obj_interface(source)
                                         for source in rule.interface.split(',')])
@@ -480,16 +484,18 @@ class RulesPFSense:
             rule.destination_ports = self.get_ports(rule.destination)
 
     def get_html(self, custom_rules=None, save=False, filename='', minify=True):
-        if custom_rules is not None:
-            rules = custom_rules
-        else:
-            rules = self.filter
+        rules = custom_rules if custom_rules is not None else self.filter
+
+        if os.path.exists(filename):
+            os.remove(filename)
+
+        if not rules:
+            return
 
         fields = [['tracker', 'tracker'], ['action', 'type'], ['floating', 'floating'], ['interface', 'interface'],
                   ['protocol', 'protocol'], ['source', 'source'], ['destination', 'destination'],
                   ['gateway', 'gateway'], ['description', 'descr'], ['created', 'created'], ['updated', 'updated']]
-        if minify:
-            html_output = '''<html><head>
+        html_output = '''<html><head>
     <meta charset="utf-8">
 </head>
 <body>
@@ -512,10 +518,8 @@ class RulesPFSense:
     .chg_old:hover{background:repeating-linear-gradient(45deg,transparent 0 5px,#0089ff50 0 10px)!important}
     .chg_new:hover{background-color:#0089ff50!important}
     </style>
-    <table id='main_tbl' class='display'>
-'''
-        else:
-            html_output = '''<html><head>
+    <table id='main_tbl' class='display'> 
+''' if minify else '''<html><head>
     <meta charset="utf-8">
     <link rel="stylesheet" type="text/css" href="DataTables/datatables.min.css"/>
     <link rel="stylesheet" type="text/css" href="DataTables/main.css"/>
@@ -531,28 +535,23 @@ class RulesPFSense:
             head += ['tfoot']
         for elem in head:
             html_output += f"\t\t<{elem}>\n\t\t<tr>\n"
-            for name, key in fields:
-                html_output += f'\t\t\t<th>{name}</th>\n'
+            html_output += ''.join([f'\t\t\t<th>{name}</th>\n' for name, key in fields])
             html_output += f"\t\t</tr>\n\t\t</{elem}>\n"
 
         html_output += "\t\t<tbody>\n"
         for rule in rules:
-
             tr_class = []
             if rule.disabled == '':
-                tr_class += ["disabled"]
+                tr_class.append("disabled")
             if rule.state != '':
-                tr_class += [rule.state]
+                tr_class.append(rule.state)
 
-            if tr_class:
-                html_output += f'\t\t<tr class="{" ".join(tr_class)}">\n'
-            else:
-                html_output += '\t\t<tr>\n'
+            html_output += f'\t\t<tr class="{" ".join(tr_class)}">\n' if tr_class else '\t\t<tr>\n'
 
-            for name, key in fields:
-                html_output += f'\t\t\t<td>{rule.__dict__[f"{key}_full"]}</td>\n'
+            html_output += ''.join([f'\t\t\t<td>{rule.__dict__[f"{key}_full"]}</td>\n' for name, key in fields])
 
             html_output += '\t\t</tr>\n'
+
         html_output += "\t\t</tbody>\n\t</table>\n"
         if not minify:
             html_output += '\t<script type="text/javascript" src="DataTables/main.js"></script>\n'
@@ -567,7 +566,7 @@ class RulesPFSense:
         logger.info('Save report')
         try:
             os.makedirs(os.path.dirname(filename), exist_ok=True)
-            open(os.path.join(filename), 'w', encoding='UTF-8').write(self.html)
+            open(filename, 'w', encoding='UTF-8').write(self.html)
         except Exception as e:
             logger.exception(f'Failed to save report. Error: {e}')
 

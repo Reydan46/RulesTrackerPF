@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from netaddr import IPAddress, IPNetwork
+from netaddr import IPNetwork
 from prettytable import PrettyTable
 import yaml
 

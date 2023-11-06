@@ -17,9 +17,17 @@ class NetboxAPI:
     def create_connection(cls):
         try:
             logger.debug("Trying to connect to NetBox")
+            url = os.getenv('NETBOX_URL')
+            token = os.getenv('NETBOX_TOKEN')
+            if not url:
+                logger.error("NetBox URL is not set")
+                return False
+            if not token:
+                logger.error("NetBox token is not set")
+                return False
             cls.__netbox_connection = pynetbox.api(
-                url=os.getenv('NETBOX_URL'),
-                token=os.getenv('NETBOX_TOKEN')
+                url=url,
+                token=token
             )
             logger.debug("Connection to NetBox established")
             return True

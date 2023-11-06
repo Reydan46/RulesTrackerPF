@@ -10,3 +10,4 @@ report
 *.iml
 test.py
 settings.yaml
+/qodana.yaml

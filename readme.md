@@ -35,14 +35,14 @@ Script to connect PFSense rule filtering by specified search criteria.
 
 # Forming a search request
 ### Possible search fields
-| Field | Description                        | Example search | Available search types |
-|-------|------------------------------------|----------------|------------------------|
-| pf    | Name of pfSense server from NetBox | pf=srv-pf      | +=, !=, ==             |
-| act   | Rule Field  Action                 | act=pass       | +=, !=, ==             |
-| desc  | Rule Field  Description            | desc=test      | +=, !=, ==             |
-| src   | Rule Field  Source                 | src=10.10.10.1 | +=                     |
-| dst   | Rule Field  Destination            | dst=10.10.10.1 | +=                     |
-| port  | Rule Field  Destination Port       | port=22        | +=, !=, ==             |
+| Field | Description                        | Example search |
+|-------|------------------------------------|----------------|
+| pf    | Name of pfSense server from NetBox | pf=srv-pf      |
+| act   | Rule Field  Action                 | act=pass       |
+| desc  | Rule Field  Description            | desc=test      |
+| src   | Rule Field  Source                 | src=10.10.10.1 | 
+| dst   | Rule Field  Destination            | dst=10.10.10.1 |
+| port  | Rule Field  Destination Port       | port=22        |
 ### Possible search types
 | Type | Description | Example search | What will be found |
 |------|-------------|----------------|--------------------|

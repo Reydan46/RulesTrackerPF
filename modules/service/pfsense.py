@@ -8,24 +8,26 @@ from netaddr import IPAddress, IPNetwork
 from modules.cache import cache_get, cache_set
 from modules.log import logger
 
+NETWORK_ANY_STR = '0.0.0.0/0'
+NETWORK_ANY = IPNetwork(NETWORK_ANY_STR)
+NETWORK_SELF = IPNetwork('127.0.0.1/32')
 
 class NetPoint:
     network = None
     url = None
 
     def __init__(self, input_str):
-        if not self.parse_ip(input_str):
-            if not self.parse_urls(input_str):
-                logger.error(f'Error parsing NetPoint: "{input_str}"')
+        if not self.parse_ip(input_str) and not self.parse_urls(input_str):
+            logger.error(f'Error parsing NetPoint: "{input_str}"')
 
     # noinspection PyBroadException
     def parse_ip(self, input_str):
         try:
             if input_str == 'any':
-                self.network = IPNetwork('0.0.0.0/0')
+                self.network = NETWORK_ANY
             # Если хотим преобразовывать (self)
             elif input_str == 'interface-(self)':
-                self.network = IPNetwork('127.0.0.1/32')
+                self.network = NETWORK_SELF
             else:
                 self.network = IPNetwork(input_str)
             return True
@@ -53,6 +55,31 @@ class NetPoint:
                 return True
         except Exception as e:
             logger.exception(f"Error check IP ({ip}) in range. Error: {e}")
+
+        return False
+
+    def ip_exact_match(self, ip_to_check):
+        # Проверяем, задана ли сеть (а не url)
+        if not self.network:
+            return False
+
+        try:
+            # Если прописан any - дописываем маску
+            if ip_to_check == '0.0.0.0':
+                ip_to_check += '/0'
+
+            ip_obj = IPNetwork(ip_to_check)
+
+            # Если указана сеть, проверяем полное соответствие (вместе с маской)
+            if '/' in ip_to_check:
+                if ip_obj == self.network:
+                    return True
+            # Если указан только адрес, проверяем без учёта маски
+            elif str(ip_obj.ip) == str(self.network.ip):
+                return True
+
+        except Exception as e:
+            logger.exception(f"Error checking IP ({ip_to_check}) for exact match. Error: {e}")
 
         return False
 
@@ -147,7 +174,8 @@ class ElementsPFSense:
     def __init__(self, xml_tree: xml.etree.ElementTree.Element,
                  item_class=None, search_name: str = '', filter_tag: str = ''):
         self.xml_tree = xml_tree
-        self.elements: list = []
+        self.elements = []
+        self.elements_dict = {}
 
         self.filter_tag = filter_tag if filter_tag else ''
         self.item_class = item_class if item_class else None
@@ -167,11 +195,12 @@ class ElementsPFSense:
     def parse(self, xml_tree: xml.etree.ElementTree.Element):
         if self.item_class:
             self.elements = [self.item_class(element) for element in xml_tree.findall(f'./{self.filter_tag}')]
+            if self.search_name:
+                self.elements_dict = {element.__getattribute__(self.search_name): element for element in self.elements}
 
     def __get_element_by_name(self, name: str):
         if self.search_name:
-            elements_dict = {element.__getattribute__(self.search_name): element for element in self.elements}
-            return elements_dict.get(name)
+            return self.elements_dict.get(name)
 
 
 class InterfacePFSense(ElementPFSense):
@@ -276,8 +305,6 @@ class RulesPFSense:
     def get_alias(self, alias_name, child_num=0):
         new_line = '&#013;&#010;'
         child_start = '&nbsp;&nbsp;&nbsp;&nbsp;'
-        # new_line = '\n'
-        # child_start = '\t'
 
         str_direction = ''
         # Ищем алиас по имени
@@ -357,17 +384,22 @@ class RulesPFSense:
         ports = []
 
         for cnf in destination:
-            if cnf['type'] == 'port':
-                alias = self.aliases[cnf['value']]
-                if alias:
-                    for str_subalias in alias.address.split(' '):
-                        subalias = self.aliases[str_subalias]
-                        if subalias:
-                            ports.extend(subalias.address.split(' '))
-                        else:
-                            ports.append(str_subalias)
+            if cnf['type'] != 'port':
+                continue
+
+            alias = self.aliases[cnf['value']]
+
+            if not alias:
+                ports.append(cnf['value'])
+                continue
+
+            for str_subalias in alias.address.split(' '):
+                subalias = self.aliases[str_subalias]
+
+                if subalias:
+                    ports.extend(subalias.address.split(' '))
                 else:
-                    ports.append(cnf['value'])
+                    ports.append(str_subalias)
 
         return ports
 
@@ -407,6 +439,12 @@ class RulesPFSense:
     def obj_direction(self, direction, rule, path):
         inverse = False
         address = []
+
+        def log_debug_message(element, value, debug_type):
+            if not element:
+                logger.debug(f'[{debug_type}] {value}')
+                logger.debug(f'[{debug_type}] {address[-1]}')
+
         for i in direction:
             match i['type']:
                 # [{'type': 'address', 'value': '10.10.10.7'}]
@@ -414,36 +452,24 @@ class RulesPFSense:
                 # [{'type': 'address', 'value': 'vcenter_ip'}]
                 case 'address':
                     address += self.get_obj_alias(i['value'])
-                    if not address[-1]:
-                        logger.debug(f'[address] {i["value"]}')
-                        logger.debug(f'[address] {address[-1]}')
+                    log_debug_message(address[-1], i["value"], "address")
                 # [{'type': 'network', 'value': 'opt1'}]
                 case 'network':
                     address.append(self.get_obj_interface(i['value']))
-                    if not address[-1]:
-                        logger.debug(f'[network] {i["value"]}')
-                        logger.debug(f'[network] {address[-1]}')
+                    log_debug_message(address[-1], i["value"], "network")
                 # [{'type': 'any', 'value': ''}]
                 case 'any':
                     if rule.interface and path == 'src':
-                        for source in rule.interface.split(','):
-                            if source == 'all':
-                                address.append('0.0.0.0/0')
-                            else:
-                                address.append(self.get_obj_interface(source))
-                        if not address[-1]:
-                            logger.debug(f'[any-interface] {rule.interface}')
-                            logger.debug(f'[any-interface] {address[-1]}')
+                        address.extend([NETWORK_ANY_STR if source == 'all' else self.get_obj_interface(source)
+                                        for source in rule.interface.split(',')])
+
+                        log_debug_message(address[-1], rule.interface, "any-interface")
                     else:
-                        address.append('0.0.0.0/0')
+                        address.append(NETWORK_ANY_STR)
                 case 'not':
                     inverse = True
 
-        output = []
-
-        if address:
-            for i in address:
-                output.append(NetPoint(i))
+        output = [NetPoint(i) for i in address] if address else []
 
         return {'inverse': inverse, 'direction': output}
 
@@ -538,7 +564,7 @@ class RulesPFSense:
             self.save_html(filename)
 
     def save_html(self, filename):
-        logger.info(f'Save report')
+        logger.info('Save report')
         try:
             os.makedirs(os.path.dirname(filename), exist_ok=True)
             open(os.path.join(filename), 'w', encoding='UTF-8').write(self.html)

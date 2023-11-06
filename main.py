@@ -4,28 +4,29 @@ from netaddr import IPAddress, IPNetwork
 from prettytable import PrettyTable
 import yaml
 
-from modules.rule.check import check_rule
+from modules.rule.check import check_rule_match
 from modules.rule.format import format_rule
 from modules.updater import check_update
 from modules.service.netbox import NetboxAPI
 from modules.service.pfsense import PFSense
 from modules.input_query import setup_readline, parse_search_query
+
 # Fix Ctrl+C for IntelliJ IDEA
 try:
     from console_thrift import KeyboardInterruptException as KeyboardInterrupt
 except ImportError:
     pass
 
-__github_update_url = 'https://raw.githubusercontent.com/Reydan46/RulesTrackerPF/master/'
-__current_version = '1.02'
-__commands = ['pf', 'act', 'desc', 'src', 'dst', 'port']
+__GITHUB_UPDATE_URL = 'https://raw.githubusercontent.com/Reydan46/RulesTrackerPF/master/'
+__CURRENT_VERSION = '1.02'
+__COMMANDS = ['pf', 'act', 'desc', 'src', 'dst', 'port']
 
 
 def read_settings(settings_path="settings.yaml"):
     try:
         with open(settings_path, "r") as file:
-            settings_data = yaml.load(file, Loader=yaml.SafeLoader)
-    except FileNotFoundError:
+            settings_data = yaml.safe_load(file)
+    except (FileNotFoundError, yaml.YAMLError):
         settings_data = None
 
     if settings_data is None:
@@ -53,7 +54,7 @@ def read_settings(settings_path="settings.yaml"):
 
 
 if __name__ == '__main__':
-    check_update(__github_update_url, __current_version)
+    check_update(__GITHUB_UPDATE_URL, __CURRENT_VERSION)
 
     settings = read_settings()
 
@@ -81,12 +82,12 @@ if __name__ == '__main__':
         PFs.append(pf)
 
     # Инициализация автозаполнения команд
-    setup_readline(__commands)
+    setup_readline(__COMMANDS)
     # Поиск
     while True:
         try:
             query = input('Enter query: ')
-            parsed_query, parsed_success = parse_search_query(query, __commands)
+            parsed_query, parsed_success = parse_search_query(query, __COMMANDS)
 
             os.system('cls' if os.name == 'nt' else 'clear')
         except KeyboardInterrupt:
@@ -116,7 +117,7 @@ if __name__ == '__main__':
                 home_pf = False
                 for interface in pf.config.interfaces:
                     ip_network_string = interface.get_ip_obj()
-                    if ip_network_string and IPAddress(parsed_query['src']['value']) in IPNetwork(ip_network_string):
+                    if ip_network_string and IPNetwork(parsed_query['src']['value']) in IPNetwork(ip_network_string):
                         home_pf = True
                         break
             else:
@@ -125,18 +126,19 @@ if __name__ == '__main__':
 
             # Обработка правил floating (quick)
             for rule in pf.config.filter:
-                if rule.floating_full == 'yes (quick)' and check_rule(rule, parsed_query, num, pf, table, home_pf):
+                if rule.floating_full == 'yes (quick)' and check_rule_match(rule, parsed_query, num, pf, table,
+                                                                            home_pf):
                     filtered_rules.append(rule)
                     num += 1
             # Обработка правил интерфейсов
             for rule in pf.config.filter:
-                if rule.floating == 'no' and check_rule(rule, parsed_query, num, pf, table, home_pf):
+                if rule.floating == 'no' and check_rule_match(rule, parsed_query, num, pf, table, home_pf):
                     filtered_rules.append(rule)
                     num += 1
             # Обработка правил floating (без quick)
             for rule in pf.config.filter:
-                if rule.floating == 'yes' and rule.quick == '' and check_rule(rule, parsed_query, num, pf, table,
-                                                                              home_pf):
+                if rule.floating == 'yes' and rule.quick == '' and check_rule_match(rule, parsed_query, num, pf, table,
+                                                                                    home_pf):
                     filtered_rules.append(rule)
                     num += 1
 

@@ -1,6 +1,7 @@
 modules/cache.py
 modules/input_query.py
 modules/log.py
+modules/settings.py
 modules/updater.py
 modules/rule/check.py
 modules/rule/format.py

@@ -3,7 +3,7 @@ import os
 import xml.etree.ElementTree
 
 import paramiko
-from netaddr import IPAddress, IPNetwork
+from netaddr import IPNetwork
 
 from modules.cache import cache_get, cache_set
 from modules.log import logger
@@ -49,8 +49,8 @@ class NetPoint:
             return False
 
         try:
-            # Пытаемся преобразовать IP в IPAddress
-            ip_obj = IPAddress(ip)
+            # Пытаемся преобразовать IP в IPNetwork
+            ip_obj = IPNetwork(ip)
             # Проверяем, входит ли IP в сеть
             if ip_obj in self.network:
                 return True

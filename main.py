@@ -2,7 +2,6 @@ import os
 from dotenv import load_dotenv
 from netaddr import IPNetwork
 from prettytable import PrettyTable
-import yaml
 
 from modules.rule.check import check_rule_match
 from modules.rule.format import format_rule
@@ -10,6 +9,7 @@ from modules.updater import check_update
 from modules.service.netbox import NetboxAPI
 from modules.service.pfsense import PFSense
 from modules.input_query import setup_readline, parse_search_query
+from modules.settings import read_settings
 
 # Fix Ctrl+C for IntelliJ IDEA
 try:
@@ -20,38 +20,6 @@ except ImportError:
 __GITHUB_UPDATE_URL = 'https://raw.githubusercontent.com/Reydan46/RulesTrackerPF/master/'
 __CURRENT_VERSION = '1.02'
 __COMMANDS = ['pf', 'act', 'desc', 'src', 'dst', 'port']
-
-
-def read_settings(settings_path="settings.yaml"):
-    try:
-        with open(settings_path, "r") as file:
-            settings_data = yaml.safe_load(file)
-    except (FileNotFoundError, yaml.YAMLError):
-        settings_data = None
-
-    if settings_data is None:
-        settings_data = {
-            'cache': {
-                'netbox': {
-                    'roles': {
-                        'days': 1, 'hours': 0, 'minutes': 0
-                    },
-                    'devices': {
-                        'days': 1, 'hours': 0, 'minutes': 0
-                    }
-                },
-                'pfsense': {
-                    'config': {
-                        'days': 0, 'hours': 1, 'minutes': 0
-                    }
-                }
-            }
-        }
-        with open(settings_path, "w") as file:
-            yaml.dump(settings_data, file)
-
-    return settings_data
-
 
 if __name__ == '__main__':
     check_update(__GITHUB_UPDATE_URL, __CURRENT_VERSION)

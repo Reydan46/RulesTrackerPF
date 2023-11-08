@@ -460,7 +460,6 @@ class RulesPFSense:
                     # value: opt1
                     address.append(self.get_obj_interface(i['value']))
                     log_debug_message(address[-1], i["value"], "network")
-                # [{'type': 'any', 'value': ''}]
                 case 'any':
                     # value: ''
                     if rule.interface and path == 'src':

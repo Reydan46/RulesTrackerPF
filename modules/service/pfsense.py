@@ -463,7 +463,7 @@ class RulesPFSense:
                 case 'any':
                     # value: ''
                     if rule.interface and path == 'src':
-                        address.extend([NETWORK_ANY_STR if source == 'all' else self.get_obj_interface(source)
+                        address.extend([NETWORK_ANY_STR if source in ['all','any'] else self.get_obj_interface(source)
                                         for source in rule.interface.split(',')])
 
                         log_debug_message(address[-1], rule.interface, "any-interface")

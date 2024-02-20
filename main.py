@@ -18,7 +18,7 @@ except ImportError:
     pass
 
 __GITHUB_UPDATE_URL = 'https://raw.githubusercontent.com/Reydan46/RulesTrackerPF/master/'
-__CURRENT_VERSION = '1.04'
+__CURRENT_VERSION = '1.05'
 __COMMANDS = ['pf', 'act', 'desc', 'src', 'dst', 'port']
 
 if __name__ == '__main__':
@@ -65,8 +65,8 @@ if __name__ == '__main__':
             input('Press Enter to continue...')
             continue
 
-        header = ["PF Name", "Num", "Tracker", "Action", "Floating", "Interface", "Source", "Destination", "Ports",
-                  "Gateway", "Description"]
+        header = ["PF Name", "Num", "Tracker", "Action", "Floating", "Protocol", "Interface", "Source", "Destination",
+                  "Ports", "Gateway", "Description"]
         table = PrettyTable(header)
         # Включаем показ разделителей между строками таблицы
         table.hrules = 1

@@ -49,6 +49,7 @@ def format_rule(inp_pf, inp_rule, inp_num, csv=False):
             inp_rule.tracker,
             str_type,
             inp_rule.floating_full,
+            inp_rule.protocol_full,
             str_interface,
             str_source,
             str_destination,
